@@ -2889,8 +2889,11 @@ void status_tick() {
     // (the slowest frame since the last line, present to present: a stall shows here, to be matched with what the log says
     // around it, such as DLSS's feature made again)
     static int64_t last_ns = 0, slowest_ns = 0;
+    static int over40 = 0, over100 = 0;   // (Mako 4.1.1: the frames over 40 and 100 ms since the last status line, for reports)
     const int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     if (last_ns) slowest_ns = std::max(slowest_ns, now_ns - last_ns);
+    if (last_ns && now_ns - last_ns > 40000000) over40++;
+    if (last_ns && now_ns - last_ns > 100000000) over100++;
     // (RX_VK_FRAME_TRACE=1: every frame a line of hookshot_frames.csv beside the game, present to present and what the frame did,
     // so that each stutter can be matched to its cause: waits for shaders or pipelines, translation, uploads, the memory sync,
     // pipeline compiles, the GPU behind. RX_VK_FRAME_LOG has the frame times alone)
@@ -2947,7 +2950,9 @@ void status_tick() {
     char v[128];
     sl::vram_text(v, sizeof v, used, allowed, known);
     logf("vk: status: %d frames, the slowest %.1f ms; %s%s", sl::kEvery, slowest_ns / 1e6, v, dlss);
-    slowest_ns = 0;
+    // (a line of its own: the launcher's Test my PC and Send logs read the status line as it is)
+    if (over40) logf("vk: stutters: %d frames over 40 ms (%d over 100 ms) in the last %d", over40, over100, sl::kEvery);
+    slowest_ns = 0, over40 = over100 = 0;
 }
 
 std::atomic<bool> present_native_pq{false};   // (do_present: the game's picture is already HDR10)
