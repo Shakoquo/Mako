@@ -97,7 +97,6 @@ struct Pool {
     uint64_t retired_epoch = 0;
     int64_t retired_ms = 0;      // (retired: when, import_now_ms; where its import waits before going back, the wait counts from here)
     bool prefetched = false;     // (amd-fix) imported ahead by the background thread, not bound yet
-    bool gpu_written = false;    // (Mako saccades) bound for a GPU write at some point (or took in a pool that was)
     // (hookshot, mirror_trim.h) mostly outside every game pool since this submission (0: not); how often its range was trimmed
     // before; and, retired by a trim, its mirror's contents wanted by each of the pools made from its live parts
     uint64_t dead_since = 0;

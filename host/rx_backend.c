@@ -376,7 +376,7 @@ int rx_start(void *hwnd) {
     if (!b || !_stricmp(b, "vulkan")) {   /* (hookshot: Vulkan unless told otherwise; a started game has no RX_BACKEND) */
         const char *dll = "hookshot_vk.dll";
         const MkwVkRenderer *r = load_vulkan(dll);
-        if (!r && !eden) {   /* (amd-fix) a graphics patch that does not start: the one it replaced (host/hos_update.c) */
+        if (!r) {   /* (amd-fix) a graphics patch that does not start: the one it replaced (host/hos_update.c) */
             r = load_vulkan("hookshot_vk.prev.dll");
             if (r) hos_log("rx: hookshot_vk.dll did not start: the previous one (hookshot_vk.prev.dll) is used");
         }
@@ -518,6 +518,7 @@ void rx_nvn_texture_created(const nvn_tex *t) {
 void rx_nvn_program_released(const nvn_prog *p) { vk ? vk->nvn_program_released(p) : wgr_nvn_program_released(p); }
 void rx_nvn_program_set(const nvn_prog *p) {
     if (vk && vk->nvn_program_set) vk->nvn_program_set(p);
+}
 void rx_nvn_program_created(const nvn_prog *p) {
     if (vk && vk->nvn_program_created) vk->nvn_program_created(p);
 }

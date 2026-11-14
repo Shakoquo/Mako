@@ -62,6 +62,7 @@ struct Reader {
 
 void disk_init();
 void get_head(Reader& r, Program& p);
+void get_info(Reader& r, Shader::Info& i);   // (Mako: program_modules, vk_shader.cpp)
 void program_cache_save(const Program& p, const std::vector<std::vector<uint32_t>>& spirv);
 /// The payload of a record: the stored bytes the file has at d.at (d.size of them), unpacked when the kind says it is
 /// compressed (RX_VK_PROGRAM_CACHE_ZSTD). On true, payload/payload_size are the program's bytes (plain, when it was

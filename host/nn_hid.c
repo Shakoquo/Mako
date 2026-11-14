@@ -1035,6 +1035,8 @@ static void input_record(uint64_t buttons, const int32_t stick[4]) {
     fprintf(f, "%lld %llx %d %d %d %d\n", (long long)((hos_now_ns() - t0) / 1000000), (unsigned long long)buttons, stick[0],
             stick[1], stick[2], stick[3]);
     fflush(f);
+}
+
 /* (the ocarina's note layer, rebuilt every read_input(): the note rows' held state, then their inputs marked consumed) */
 static void oc_notes(void) {
     binds_load();

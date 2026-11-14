@@ -1127,9 +1127,6 @@ struct PipeEntry {
     std::atomic<bool> ready{false};
     std::atomic<VkPipeline> pipeline{VK_NULL_HANDLE};   // (a fast-linked one first, the worker's full build over it)
     std::shared_ptr<JobClaim> claim;   // (hookshot: its build, which a draw that must wait runs itself if no worker took it yet)
-    std::atomic<bool> asked{false};    // (Mako §78: the caches asked for the full one, quick_pipeline)
-    std::atomic<bool> waited{false};   // (Mako §78: a draw waited for its quick one once, quick_pipeline)
-    std::atomic<bool> quick{false};    // (Mako §78: a quick one, without the driver's optimizer, being made or made: quick_pipeline)
     std::atomic<uint8_t> how{0};   // (the census: how play made it, UseCounters::made_how; 0: before play, or not made)
     std::atomic<uint8_t> quick{0};   // (hookshot: quick_pipeline's, before the full build: quick_pipe.h's kNone, kMaking, kTried)
 };
@@ -9678,7 +9675,7 @@ void predict_run(void (*progress)(size_t done, size_t total), bool background) {
     // priority. Now the bar counts them from the start (PrepareBar), closing the window stops them (prepare_stopped, kept for the
     // next start), and they take every CPU: nothing else runs before the game
     static const int budget_s = getenv("RX_VK_PREDICT_S") ? atoi(getenv("RX_VK_PREDICT_S")) : 0;
-    const auto worker = [pre, t0] {
+    const auto worker = [pre, t0, background] {
         ub_thread_off();   // (a background thread: see ub_thread_off)
         driver_cache_only = true;
         if (background) SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE);   // (Mako: behind the game)
