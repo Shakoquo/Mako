@@ -2467,7 +2467,7 @@ class LauncherForm : Form {
     void OnSendLogs() {
         string hook = ReportHook();
         if (hook.Length == 0) {
-            MessageBox.Show(this, "Sending logs is not set up in this build. Open the game folder and send hookshot_log.txt on the Mako Discord.", Fork.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "Sending logs is not set up in this build. Open the game folder and send logs\\hookshot_log.txt on the Mako Discord.", Fork.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
         string stamp = Path.Combine(dir, "user", "report_last.txt");
@@ -2478,7 +2478,12 @@ class LauncherForm : Form {
             }
         } catch { }
         var logs = new List<string>();
-        foreach (var n in new[] { "hookshot_log.txt", "hookshot_log.1.txt" }) if (File.Exists(Path.Combine(dir, n))) logs.Add(n);
+        // (Mako 4.1.1: the game writes its logs in logs\ since the Longshot merge; a game from before, beside it)
+        foreach (var n in new[] { "hookshot_log.txt", "hookshot_log.1.txt" }) {
+            string inLogs = Path.Combine("logs", n);
+            if (File.Exists(Path.Combine(dir, inLogs))) logs.Add(inLogs);
+            else if (File.Exists(Path.Combine(dir, n))) logs.Add(n);
+        }
         if (logs.Count == 0) {
             MessageBox.Show(this, "There is no game log yet: start the game once, then send.", Fork.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
@@ -2510,7 +2515,7 @@ class LauncherForm : Form {
                 try { Directory.CreateDirectory(Path.Combine(dir, "user")); File.WriteAllText(stamp, DateTime.UtcNow.ToString("o")); } catch { }
                 MessageBox.Show(this, "Sent. Thank you: the Mako team will read it.", Fork.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
             } else
-                MessageBox.Show(this, "The report could not be sent:\n" + err + "\n\nYou can send hookshot_log.txt (game folder) on the Mako Discord instead.", Fork.Name, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "The report could not be sent:\n" + err + "\n\nYou can send logs\\hookshot_log.txt (game folder) on the Mako Discord instead.", Fork.Name, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -2531,7 +2536,7 @@ class LauncherForm : Form {
                         string text;
                         using (var fs = new FileStream(Path.Combine(dir, n), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
                         using (var r = new StreamReader(fs, Encoding.UTF8)) text = r.ReadToEnd();
-                        var e = za.CreateEntry(n, System.IO.Compression.CompressionLevel.Optimal);
+                        var e = za.CreateEntry(Path.GetFileName(n), System.IO.Compression.CompressionLevel.Optimal);
                         using (var w = new StreamWriter(e.Open(), new UTF8Encoding(false))) w.Write(Scrub(text));
                     }
                 }
