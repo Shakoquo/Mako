@@ -2299,7 +2299,7 @@ uint64_t device_vram_bytes() {
     uint64_t vram = 0;
     for (uint32_t h = 0; h < dev.memory.memoryHeapCount; h++)
         if (dev.memory.memoryHeaps[h].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) vram = std::max(vram, (uint64_t)dev.memory.memoryHeaps[h].size);
-    return vram;
+    return vram - std::min(vram, ballast_held);   // (RX_VK_BALLAST_MB: the smaller card it plays)
 }
 bool preset_caps_memory() {
     static const uint64_t nominal_gb[] = {0, 4, 6, 8, 12, 16};
@@ -2316,9 +2316,14 @@ uint64_t mirror_budget() {
         uint64_t vram = 0;
         for (uint32_t h = 0; h < dev.memory.memoryHeapCount; h++)
             if (dev.memory.memoryHeaps[h].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) vram = std::max(vram, (uint64_t)dev.memory.memoryHeaps[h].size);
+        vram -= std::min(vram, ballast_held);   // (RX_VK_BALLAST_MB: the smaller card it plays)
         // (cards of 6 GB or less only: on 8 GB ones, a 3070 or a 4060, the game's memory read over PCIe instead left the GPU at a few
         // percent and the frame stuttering)
-        if (vram && vram <= (6ull << 30) + (512ull << 20)) return vram / 8;
+        // (Mako 4.1.1: and up to 12 GB, an eighth too. A 16 GB card held back to 8 GB (RX_VK_BALLAST_MB=8192, the budgets an 8 GB
+        // card's) with a quarter of mirrors, ~2 GB, filled the card on entering Hyrule Field: 6548 of 6564 MB, frames of 0.9-5 s, as
+        // the AMD 8-12 GB testers' device losses and freezes. With 1 GB the same walk ran through: 55.9 fps, at most 91% of the card.
+        // A tighter rule instead (RX_VK_MIRROR_TIGHT) froze 1.2 s. Cards over 12.5 GB: as before)
+        if (vram && vram <= (12ull << 30) + (512ull << 20)) return vram / 8;
         return vram ? std::min<uint64_t>(vram / 4, 3072ull << 20) : (uint64_t)(3072ull << 20);
     }();
     // (the Insert menu's quality preset sets one, 256 MB at Minimum (4GB): it was never read, and an 8 GB card kept ~2 GB of
@@ -2326,7 +2331,9 @@ uint64_t mirror_budget() {
     // (only on a card the preset is for: preset_caps_memory)
     // (Mako §74: the env is read once; a getenv on every call cost ~0.3% of the replay thread, a few calls a submission)
     static const bool env_set = getenv("RX_VK_MIRROR_MB") != nullptr;
-    if (opts.mirror_mb > 0 && !env_set && preset_caps_memory()) return (uint64_t)opts.mirror_mb << 20;
+    // (Mako 4.1.1: at most the card's own. The High (12GB) preset's 2 GB on an 8 GB card (RX_VK_BALLAST_MB=8192, the user's
+    // memory_budget=4) filled it entering Hyrule Field, 6321 of 6550 MB, with the card's own eighth (1 GB) it ran through)
+    if (opts.mirror_mb > 0 && !env_set && preset_caps_memory()) return std::min<uint64_t>((uint64_t)opts.mirror_mb << 20, b);
     return b;
 }
 uint64_t mirror_bytes = 0, mirror_epoch = 0;

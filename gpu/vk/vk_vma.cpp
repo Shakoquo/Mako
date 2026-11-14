@@ -19,6 +19,9 @@ namespace mkwvk {
 
 VmaAllocator vma;
 
+// (Mako tests) the ballast below: off the process's own count and off what the driver allows it, in vram_usage, so the game
+// sizes its budgets as on the smaller card it plays (with it counted, the budgets were a 16 GB card's and filled the rest at once)
+uint64_t ballast_held = 0;
 bool vma_init(PFN_vkGetInstanceProcAddr gipa) {
     VmaVulkanFunctions f{};
     f.vkGetInstanceProcAddr = gipa;
@@ -32,7 +35,31 @@ bool vma_init(PFN_vkGetInstanceProcAddr gipa) {
     ci.vulkanApiVersion = VK_API_VERSION_1_3;
     ci.pVulkanFunctions = &f;
     ci.preferredLargeHeapBlockSize = 64ull << 20;   // (64 MB blocks: Eglantine found 256 MB ones wasted VRAM)
-    return vmaCreateAllocator(&ci, &vma) == VK_SUCCESS;
+    const bool ok = vmaCreateAllocator(&ci, &vma) == VK_SUCCESS;
+    // (Mako tests) RX_VK_BALLAST_MB=<MB>: that much video memory taken at the start and held, in 256 MB pieces of the card's own
+    // memory, as another program would: a 16 GB card plays as a smaller one (8192: an 8 GB card), for the VRAM tests
+    if (const char* e = ok ? getenv("RX_VK_BALLAST_MB") : nullptr) {
+        VkPhysicalDeviceMemoryProperties mp;
+        vkGetPhysicalDeviceMemoryProperties(dev.physical, &mp);
+        uint32_t type = UINT32_MAX;
+        for (uint32_t i = 0; i < mp.memoryTypeCount && type == UINT32_MAX; i++)
+            if ((mp.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) &&
+                !(mp.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
+                type = i;
+        uint64_t held = 0;
+        const uint64_t want = (uint64_t)std::max(0, atoi(e)) << 20;
+        while (type != UINT32_MAX && held < want) {
+            VkMemoryAllocateInfo ai{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+            ai.allocationSize = std::min<uint64_t>(256ull << 20, want - held);
+            ai.memoryTypeIndex = type;
+            VkDeviceMemory m;
+            if (vkAllocateMemory(dev.device, &ai, nullptr, &m) != VK_SUCCESS) break;
+            held += ai.allocationSize;   // (held for the session: never freed)
+        }
+        ballast_held = held;
+        logf("vk: ballast: %llu MB of video memory held (RX_VK_BALLAST_MB=%s), memory type %u", (unsigned long long)(held >> 20), e, type);
+    }
+    return ok;
 }
 
 // Images come from a pool of 128 MB blocks: on their own, VMA gave most of them dedicated memory (the driver prefers it
@@ -371,6 +398,7 @@ bool vram_usage(uint64_t* used, uint64_t* budget, uint64_t* block_free) {
     // keep-rendered paths an 8 GB card takes when its VRAM fills (the rainbow textures of issue 993 were never seen here otherwise))
     static const uint64_t test_allowed = getenv("RX_VK_TEST_ALLOWED_MB") ? (uint64_t)atoi(getenv("RX_VK_TEST_ALLOWED_MB")) << 20 : 0;
     if (test_allowed && t > test_allowed) t = test_allowed;
+    if (ballast_held) u -= std::min(u, ballast_held), t -= std::min(t, ballast_held);
     *used = u, *budget = t;
     if (block_free) *block_free = f;
     return t != 0;
