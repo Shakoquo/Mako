@@ -97,7 +97,10 @@ static LONG CALLBACK commit_on_touch(EXCEPTION_POINTERS *info) {
        Windows only: Linux commits nothing lazily, its VirtualQuery stand-in calls every guest page committed and read-write, and
        its signal handler never sets 8, so there every SIGSEGV and SIGBUS in the window would be tried again forever, at 100% CPU,
        rather than reach report_crash) */
-    if (mbi.State == MEM_COMMIT && mbi.Protect == PAGE_READWRITE && rec->ExceptionInformation[0] != 8)
+    /* (Mako 4.1.1: or PAGE_EXECUTE_READWRITE: a range the renderer imported is made a region of its own that way, vk_memory.cpp
+       make_own_region; a touch racing that import crashed the game at its start, ModuleSystemWorker1's copy into it) */
+    if (mbi.State == MEM_COMMIT && (mbi.Protect == PAGE_READWRITE || mbi.Protect == PAGE_EXECUTE_READWRITE) &&
+        rec->ExceptionInformation[0] != 8)
         return EXCEPTION_CONTINUE_EXECUTION;
 #endif
     if (mbi.State != MEM_RESERVE) return EXCEPTION_CONTINUE_SEARCH;
