@@ -48,6 +48,8 @@ enum { HOS_OPT_DAMAGE_TAKEN = 55 };
 static int setting = 1, protection, player = 1;
 int rx_option(int id, int otherwise) { assert(id == 55 && otherwise == 1); return setting; }
 int hos_oot_hearts_enabled(void) { return protection; }
+static int mq = 1;   /* (Mako) host/master_quest.c: Master Quest's multiplier */
+int hos_mq_damage(uint32_t old, uint32_t next) { return next < old ? mq : 1; }
 typedef struct { uint64_t x[32]; } Ctx;
 static int hos_oot_is_player(Ctx *c, uint64_t actor) { (void)c; return player && actor == 100; }
 static uint64_t recomp_load64(Ctx *c, uint64_t address) { (void)c; assert(address == 100 + 7184); return 200; }
@@ -117,6 +119,14 @@ int main(void) {
     site(&lethal, 1); assert(lethal.x[12] == 0 && lethal.x[9] == 4);
     setting = -1; assert(hos_oot_damage(12, 8, 4) == 8);
     setting = 4; assert(hos_oot_damage(12, 8, 4) == 8);
+    /* (Mako) Master Quest multiplies the loss after the setting; healing and the hearts cheat are as without it */
+    mq = 2; setting = 1; assert(hos_oot_damage(12, 8, 4) == 4);
+    setting = 2; assert(hos_oot_damage(20, 16, 4) == 4);
+    setting = 0; assert(hos_oot_damage(12, 8, 4) == 8);
+    assert(hos_oot_damage(8, 12, 0) == 12);
+    protection = 1; assert(hos_oot_damage(12, 8, 4) == 12); protection = 0;
+    setting = 1; assert(hos_oot_damage(4, 2, 2) == 0);
+    mq = 1;
     puts("PASS: damage arithmetic, lethal/quarter hits, healing, protection, both player guards and option wiring");
 }
 '''
