@@ -2397,7 +2397,29 @@ const Program* program_for(const NvnState& s, ProgramKind kind, const uint8_t co
 const Program* program_pick(const NvnState& s, ProgramKind kind, const uint8_t color_types[8]) {
     PROF_EXACT();   // (the picks' slow path: a translation, a cache read; PROF_PROGRAM samples the rest)
     const bool compute = kind == ProgramKind::Compute;
-    std::lock_guard lk(shader_mu);
+    std::unique_lock lk(shader_mu);
+    // (Mako 4.1.1, cores: a program's stages read and parsed with the lock let go. With the replay on several threads
+    // (RX_VK_PARALLEL) one thread parsing a new area's program held shader_mu and the others waited behind it: 166 ms with
+    // every worker in _Mtx_lock under program_pick in the field. Two threads may parse the same one: the first kept)
+    if (codes.find(s.prog.serial) == codes.end() || codes[s.prog.serial].empty()) {
+        bool from_pf = false;
+        {
+            std::lock_guard pl(pf_mu);
+            from_pf = pf_ready.count(s.prog.serial) != 0;
+        }
+        if (!from_pf) {
+            const uint64_t serial = s.prog.serial;
+            lk.unlock();
+            std::vector<Code> mine;
+            for (uint32_t i = 0; i < s.prog.nstage && i < 6; i++) {
+                Code c = read_code(s.prog.sd[i]);
+                if (c.ok) mine.push_back(std::move(c));
+            }
+            lk.lock();
+            auto& v = codes[serial];
+            if (v.empty()) v = std::move(mine);
+        }
+    }
     const std::vector<Code>& cs = codes_of(s);
     const Code* stage_code[8]{};
     for (const Code& c : cs)
@@ -2429,7 +2451,16 @@ const Program* program_pick(const NvnState& s, ProgramKind kind, const uint8_t c
     variants.push_back(std::move(p));
     static const bool sync = getenv("RX_VK_SYNC_SHADERS") != nullptr;
     if (compute || sync) {   // (compute: dispatches are never left out, so they are translated where they are)
-        translate_into(*raw, s, stage_code[0], stage_code[1], compute ? stage_code[5] : nullptr, color_types);
+        // (Mako 4.1.1, cores: translated with the lock let go, from copies of its stages (the codes table may change meanwhile):
+        // the other recording threads go on with their own picks. One asking for this same program finds it not ready and
+        // waits for it as for a queued one (program_wait))
+        const bool has[3] = {stage_code[0] != nullptr, stage_code[1] != nullptr, compute && stage_code[5] != nullptr};
+        Code c0 = has[0] ? *stage_code[0] : Code{}, c1 = has[1] ? *stage_code[1] : Code{}, c5 = has[2] ? *stage_code[5] : Code{};
+        uint8_t ct[8];
+        std::memcpy(ct, color_types, 8);
+        lk.unlock();
+        translate_into(*raw, s, has[0] ? &c0 : nullptr, has[1] ? &c1 : nullptr, has[2] ? &c5 : nullptr, ct);
+        jobs_notify();   // (a thread in jobs_wait for this one wakes)
         return raw->failed ? nullptr : raw;
     }
     struct Job {
