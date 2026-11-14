@@ -2419,7 +2419,11 @@ namespace {
 /// the ground came in flat on arriving somewhere and stayed so until the pause menu's light frames let it through.
 /// RX_VK_DEFER_AGAIN=1: as before
 bool upload_defer(Texture& tex) {
-    static const int64_t budget_ns = (int64_t)(getenv("RX_VK_UPLOAD_BUDGET_MS") ? atof(getenv("RX_VK_UPLOAD_BUDGET_MS")) : 40.0) * 1000000;
+    // (Mako 4.1.1: 10, was 40. Walking the user's recorded Hyrule Field tour, 40 let new areas' textures take 30-141 ms of a frame,
+    // the sudden 60 -> 40 fps drops: 9 seconds under 50 game fps, 20 replay frames over 40 ms. At 10: 3-4 s and 2-11 frames,
+    // the walk 56.7 -> 60.1 / 61.8 fps, the largest frame's uploads 9-23 ms, the picture the same. The 8 ms flicker of 2026-11-09
+    // was before RX_VK_DEFER_FRAMES: a texture now waits 3 frames at most)
+    static const int64_t budget_ns = (int64_t)(getenv("RX_VK_UPLOAD_BUDGET_MS") ? atof(getenv("RX_VK_UPLOAD_BUDGET_MS")) : 10.0) * 1000000;
     if (!budget_ns || !upload_defer_ok || tex.uploaded || !tex.astc || tex.gpu_written) return false;
     if (frame_upload_ns.load(std::memory_order_relaxed) < budget_ns) return false;
     static const bool again = getenv("RX_VK_DEFER_AGAIN") != nullptr;
