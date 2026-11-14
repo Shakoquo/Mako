@@ -31,6 +31,8 @@ void jobs_push_serial(std::function<void()> fn, std::function<void()> on_failure
 /// Waits until flag is set by a job (which calls jobs_notify after setting it)
 void jobs_wait(const std::atomic<bool>& flag);
 bool jobs_steal(const std::atomic<bool>& flag);   // (Mako §78: a queued job for that flag run here, now)
+/// Waits at most ms for flag, without running a queued job on this thread; whether it was set
+bool jobs_wait_for(const std::atomic<bool>& flag, double ms);
 void jobs_notify();
 int jobs_pending();
 
