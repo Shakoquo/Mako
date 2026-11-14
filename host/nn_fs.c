@@ -11,11 +11,11 @@
 #include <string.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#ifndef LONGSHOT_ENV_H   /* (env_on: the switches' one rule) */
-#include "../gpu/vk/compat/longshot_env.h"
+#ifndef HOOKSHOT_ENV_H   /* (env_on: the switches' one rule) */
+#include "../gpu/vk/compat/hookshot_env.h"
 #endif
 
-/* (longshot, #1468) A game folder whose deepest file passes 260 characters (MAX_PATH: "E:\Games\...\romfs\Event\EventSetting\
+/* (hookshot, #1468) A game folder whose deepest file passes 260 characters (MAX_PATH: "E:\Games\...\romfs\Event\EventSetting\
    Ev..." at 262) is read too. The host paths here are up to HOS_FS_PATH bytes, and on Windows each file call goes through
    its wide function: the path converted from the game's UTF-8 strings and, when it is
    long and absolute, given the extended-length prefix \\?\ (with its / made \), which Windows takes without its long-paths
@@ -101,7 +101,7 @@ static int mount(const char *name, const char *root, int writable) {   /* 0: the
     AcquireSRWLockExclusive(&mount_lock);
     int i;
     for (i = 0; i < nmounts && strcmp(mounts[i].name, name); i++) {}
-    if (i == nmounts) {   /* (longshot: a 17th name was written past the table) */
+    if (i == nmounts) {   /* (hookshot: a 17th name was written past the table) */
         if (nmounts == 16) {
             ReleaseSRWLockExclusive(&mount_lock);
             hos_log("fs: %s: not mounted (16 mounts already)", name);
@@ -121,7 +121,7 @@ static int mount(const char *name, const char *root, int writable) {   /* 0: the
 int hos_mods_romfs(const char *rel, char *out, size_t cap);   /* mods.c */
 int hos_mods_dir_extras(const char *rel, const char *base_dir, void (*fn)(void *, const char *, int, uint64_t), void *arg);
 
-/* (longshot) a guest path below its mount stays below it on the host: no "." or ".." part, no \\ or : (a drive or a
+/* (hookshot) a guest path below its mount stays below it on the host: no "." or ".." part, no \\ or : (a drive or a
    Windows stream), no control characters; on Windows also no part ending in a dot or a space (Windows drops them) and
    no device name (CON, NUL, COM1, COM\u00b9, "NUL .txt"...) */
 static int guest_path_ok(const char *rest) {
@@ -161,7 +161,7 @@ static int guest_path_ok(const char *rest) {
 /* "mount:/a/b" -> host path (a mod's file instead of the RomFS one, when a mod has it: mods.c). Returns 0 if the mount
    is unknown, or the path leaves it (guest_path_ok). */
 static int host_path(const char *guest_mem, char *out, size_t cap, int *writable) {
-    /* (longshot) one copy of the path, read once: another guest thread may change guest memory between the check and
+    /* (hookshot) one copy of the path, read once: another guest thread may change guest memory between the check and
        the use */
     char guest[FS_PATH_MAX];
     if ((size_t)snprintf(guest, sizeof guest, "%s", guest_mem) >= sizeof guest) return 0;
@@ -190,7 +190,7 @@ static int host_path(const char *guest_mem, char *out, size_t cap, int *writable
 /* For other OS layer parts that open game files themselves (videos): "mount:/a/b" -> host path, 0 if unknown. */
 int hos_fs_host_path(const char *guest, char *out, size_t cap) { return host_path(guest, out, cap, NULL); }
 
-/* (longshot) a guest string: "" unless it lies in guest memory and ends within FS_PATH_MAX bytes */
+/* (hookshot) a guest string: "" unless it lies in guest memory and ends within FS_PATH_MAX bytes */
 static const char *gstr(uint64_t a) {
     if (!a || a >= (uint64_t)HOS_SPACE_END) return "";
     const uint64_t room = (uint64_t)HOS_SPACE_END - a;
@@ -240,14 +240,14 @@ HLE(_ZN2nn2fs8MountRomEPKcPvm) {
     if (!hos_romfs_dir) hos_fatal(c, "fs: MountRom but no RomFS folder given (--romfs)");
     RET(mount(gstr(ARG(0)), hos_romfs_dir, 0) ? 0 : R_NOT_MOUNTED);
 }
-/* (longshot) MountRom(char const* name): the cacheless overload OoT uses (SDK 22). Left to the SDK it opens the
+/* (hookshot) MountRom(char const* name): the cacheless overload OoT uses (SDK 22). Left to the SDK it opens the
    file-system proxy over IPC and aborts on the empty reply. */
 HLE(_ZN2nn2fs8MountRomEPKc) {
     if (!hos_romfs_dir) hos_fatal(c, "fs: MountRom but no RomFS folder given (--romfs)");
     RET(mount(gstr(ARG(0)), hos_romfs_dir, 0) ? 0 : R_NOT_MOUNTED);
 }
 
-/* (longshot) the folder the game's saves are mounted from, for the control bridge's saves (host/control.c) */
+/* (hookshot) the folder the game's saves are mounted from, for the control bridge's saves (host/control.c) */
 static char save_root[HOS_FS_PATH];
 int hos_fs_save_root(char *out, size_t cap) {
     AcquireSRWLockShared(&mount_lock);
@@ -347,7 +347,7 @@ HLE(_ZN2nn2fs8OpenFileEPNS0_10FileHandleEPKci) {
     const char *g = gstr(ARG(1));
     /* (mkw-recomp 16bc3bc: the host's file calls block, so the virtual core goes to another thread meanwhile, as
        Horizon would run another while this one waits for the file system. OoT's ARes loaders held it up to 250 ms.)
-       (longshot, #1929) From before host_path: the first open of a button-prompt file builds it there (prompts.c,
+       (hookshot, #1929) From before host_path: the first open of a button-prompt file builds it there (prompts.c,
        251-357 ms on Linux), and other threads that open it meanwhile wait in there for the build; with the core held
        through that, four threads waiting for the core ran without one within 50 ms */
     const int away = hos_vcore_away();
@@ -418,7 +418,7 @@ HLE(_ZN2nn2fs8OpenFileEPNS0_10FileHandleEPKci) {
 static uint64_t read_at(Ctx *c, uint64_t id, int64_t off, uint64_t buf, uint64_t size, int *oom) {
     Handle *fh = get_handle(c, id);
     uint64_t done = 0;
-    if (!hos_guest_range(buf, size)) return 0;   /* (longshot: the file's bytes go into guest memory only) */
+    if (!hos_guest_range(buf, size)) return 0;   /* (hookshot: the file's bytes go into guest memory only) */
     static int64_t delay_ns = -1, delay_after_ns;   /* HOS_FS_DELAY_MS=<ms>[,<after s>] (experiment): slower reads */
     if (delay_ns < 0) {
         const char *e = getenv("HOS_FS_DELAY_MS");
@@ -480,7 +480,7 @@ HLE(_ZN2nn2fs8ReadFileEPmNS0_10FileHandleElPvmRKNS0_10ReadOptionE) {
 }
 /* GetFileSize(long*, FileHandle) */
 HLE(_ZN2nn2fs11GetFileSizeEPlNS0_10FileHandleE) {
-    LARGE_INTEGER sz = {0};   /* (longshot: a folder's handle has no size: 0, not the host stack's bytes) */
+    LARGE_INTEGER sz = {0};   /* (hookshot: a folder's handle has no size: 0, not the host stack's bytes) */
     GetFileSizeEx(get_handle(c, ARG(1))->h, &sz);
     G64(ARG(0)) = (uint64_t)sz.QuadPart;
     RET(0);
@@ -492,7 +492,7 @@ HLE(_ZN2nn2fs9WriteFileENS0_10FileHandleElPKvmRKNS0_11WriteOptionE) {
     ov.Offset = (DWORD)ARG(1);
     ov.OffsetHigh = (DWORD)(ARG(1) >> 32);
     DWORD put = 0;
-    /* (longshot) from guest memory only, and the whole size: a DWORD cut wrote less than asked and said so */
+    /* (hookshot) from guest memory only, and the whole size: a DWORD cut wrote less than asked and said so */
     if (ARG(3) <= 0xFFFFFFFFu && hos_guest_range(ARG(2), ARG(3))) {
         if (ARG(3) && !hos_commit(ARG(2), ARG(3))) {   /* (as the read: refused, an error, not a short write) */
             RET(R_OUT_OF_MEMORY);
@@ -556,7 +556,7 @@ static void delete_tree(const char *dir) {
             if (!strcmp(fd.cFileName, ".") || !strcmp(fd.cFileName, "..")) continue;
             char sub[HOS_FS_PATH];
             snprintf(sub, sizeof sub, "%s\\%s", dir, fd.cFileName);
-            /* (longshot) a link (a symbolic link, a junction) goes itself: never what it points to */
+            /* (hookshot) a link (a symbolic link, a junction) goes itself: never what it points to */
             if (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) { if (!DeleteFileA(sub)) RemoveDirectoryA(sub); }
             else if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) delete_tree(sub);
             else DeleteFileA(sub);
@@ -569,7 +569,7 @@ HLE(_ZN2nn2fs26DeleteDirectoryRecursivelyEPKc) {
     char path[HOS_FS_PATH];
     int writable = 0;
     if (!host_path(gstr(ARG(0)), path, sizeof path, &writable) || !writable) { RET(R_PATH_NOT_FOUND); return; }
-    /* (longshot) the folder named itself a link: the link goes, never what it points to (as for the links inside) */
+    /* (hookshot) the folder named itself a link: the link goes, never what it points to (as for the links inside) */
     const DWORD at = GetFileAttributesA(path);
     if (at != INVALID_FILE_ATTRIBUTES && (at & FILE_ATTRIBUTE_REPARSE_POINT)) {
         if (!DeleteFileA(path)) RemoveDirectoryA(path);
@@ -650,7 +650,7 @@ HLE(_ZN2nn2fs13OpenDirectoryEPNS0_15DirectoryHandleEPKci) {
     G64(ARG(0)) = new_handle(dh);
     RET(0);
 }
-/* (longshot) A directory's listing is read, counted and closed under one lock: a CloseDirectory on another guest thread freed
+/* (hookshot) A directory's listing is read, counted and closed under one lock: a CloseDirectory on another guest thread freed
    the handle (and its find handle) while a ReadDirectory or GetDirectoryEntryCount still walked it */
 static SRWLOCK dir_lock = SRWLOCK_INIT;
 /* ReadDirectory(long* count, DirectoryEntry* entries, DirectoryHandle, long max) */
@@ -686,7 +686,7 @@ HLE(_ZN2nn2fs13ReadDirectoryEPlPNS0_14DirectoryEntryENS0_15DirectoryHandleEl) {
     G64(ARG(0)) = (uint64_t)n;
     RET(0);
 }
-/* (longshot) GetDirectoryEntryCount(long* count, DirectoryHandle): every entry the open mode lists, read or not */
+/* (hookshot) GetDirectoryEntryCount(long* count, DirectoryHandle): every entry the open mode lists, read or not */
 HLE(_ZN2nn2fs22GetDirectoryEntryCountEPlNS0_15DirectoryHandleE) {
     AcquireSRWLockExclusive(&dir_lock);
     Handle *dh = get_handle(c, ARG(1));

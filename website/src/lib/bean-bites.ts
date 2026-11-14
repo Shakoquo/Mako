@@ -19,8 +19,8 @@ export function chooseBeanBite(previous, random = Math.random) {
 export function refreshBeanBite(element, window, random = Math.random) {
   if (!element) return;
   let previous = element.textContent;
-  try { previous = window.sessionStorage.getItem('longshot-bean-bite') || previous; } catch { /* Storage is optional. */ }
+  try { previous = window.sessionStorage.getItem('hookshot-bean-bite') || previous; } catch { /* Storage is optional. */ }
   const next = chooseBeanBite(previous, random);
   element.textContent = next;
-  try { window.sessionStorage.setItem('longshot-bean-bite', next); } catch { /* Keep the visible line without storage. */ }
+  try { window.sessionStorage.setItem('hookshot-bean-bite', next); } catch { /* Keep the visible line without storage. */ }
 }

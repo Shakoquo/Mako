@@ -46,7 +46,7 @@ class SessionLock(unittest.TestCase):
             os.makedirs(used)
             with open(os.path.join(conf, "forge.json"), "w", encoding="utf-8") as f:
                 json.dump({"login": "someone", "access_token": "old", "refresh_token": "rt0", "expires_at": 0}, f)
-            env = dict(os.environ, LONGSHOT_TEAM_CHAT_DIR=conf)
+            env = dict(os.environ, HOOKSHOT_TEAM_CHAT_DIR=conf)
             procs = [subprocess.Popen([sys.executable, "-I", "-B", "-c", CHILD, ROOT, used], env=env,
                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for _ in range(4)]
             outs = [p.communicate(timeout=60) for p in procs]

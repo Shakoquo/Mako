@@ -23,7 +23,7 @@ export const legacyAnchors = new Map([
   ['a-download-is-flagged', 'windows-defender-or-the-browser-flags-the-download'],
 ]);
 // A problem ends with one line of searches of the reports: [Search ...](.../progress/#problem-search?q=...) · ...
-const searchLink = String.raw`\[Search [^\]]+\]\((?:https://longshot\.magicbean\.dev)?/progress/#problem-search\?q=[^)\s]+\)`;
+const searchLink = String.raw`\[Search [^\]]+\]\((?:https://hookshot\.magicbean\.dev)?/progress/#problem-search\?q=[^)\s]+\)`;
 const searchLine = new RegExp(`^${searchLink}(?: · ${searchLink})*$`);
 
 const escape = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');

@@ -38,7 +38,7 @@ class FolderTests(unittest.TestCase):
                    and any(isinstance(c, ast.Call) and isinstance(c.func, ast.Name) and c.func.id == "shader_census_cmd"
                            for c in ast.walk(n)))
         finish = compile(ast.Module(body=main.body[start:end], type_ignores=[]), "make_game.py", "exec")
-        with tempfile.TemporaryDirectory(prefix="longshot-finish-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="hookshot-finish-") as tmp:
             work, out = Path(tmp) / "work", Path(tmp) / "game"
             built = work / "sa" / "build"
             built.mkdir(parents=True)
@@ -49,14 +49,14 @@ class FolderTests(unittest.TestCase):
             out.mkdir()
             for name in make_game.BESIDE:   # (a folder from a builder before the launcher: the game and its libraries in it)
                 (out / name).write_bytes(b"old " + name.encode())
-            with mock.patch.dict(os.environ, {"LONGSHOT_TOOLS": str(ROOT)}):
+            with mock.patch.dict(os.environ, {"HOOKSHOT_TOOLS": str(ROOT)}):
                 exec(finish, make_game.__dict__, {"built": str(built), "out": str(out), "work": str(work),
                                                    "a": SimpleNamespace(fsr=False, no_fsr=False, update=None, fetch_fsr_runtime=False)})
-            self.assertEqual((out / "longshot").read_bytes(), (ROOT / "builder" / "linux" / "longshot-folder").read_bytes())
-            self.assertTrue((out / "longshot").stat().st_mode & stat.S_IXUSR)
-            self.assertEqual(sorted(p.name for p in out.iterdir()), ["bin", "image.bin", "longshot"])
+            self.assertEqual((out / "hookshot").read_bytes(), (ROOT / "builder" / "linux" / "hookshot-folder").read_bytes())
+            self.assertTrue((out / "hookshot").stat().st_mode & stat.S_IXUSR)
+            self.assertEqual(sorted(p.name for p in out.iterdir()), ["bin", "image.bin", "hookshot"])
             self.assertEqual(sorted(p.name for p in (out / "bin").iterdir()), sorted(make_game.BESIDE))
-            self.assertEqual((out / "bin" / "longshot").read_bytes(), b"new longshot")
+            self.assertEqual((out / "bin" / "hookshot").read_bytes(), b"new hookshot")
 
     def test_the_sysroot_path_is_not_part_of_an_object_key(self):
         import build
@@ -64,14 +64,14 @@ class FolderTests(unittest.TestCase):
         os.write(handle, b"int x;\n")
         os.close(handle)
         try:
-            one = build.object_key(name, ["--sysroot=/tmp/.mount_aaa/usr/lib/longshot/sysroot", "-O2"], b"deps")
-            two = build.object_key(name, ["--sysroot=/tmp/.mount_bbb/usr/lib/longshot/sysroot", "-O2"], b"deps")
+            one = build.object_key(name, ["--sysroot=/tmp/.mount_aaa/usr/lib/hookshot/sysroot", "-O2"], b"deps")
+            two = build.object_key(name, ["--sysroot=/tmp/.mount_bbb/usr/lib/hookshot/sysroot", "-O2"], b"deps")
         finally:
             os.remove(name)
         self.assertEqual(one, two)
 
     def test_the_folder_launcher_starts_the_builder(self):
-        with tempfile.TemporaryDirectory(prefix="longshot-folder-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="hookshot-folder-") as tmp:
             root = Path(tmp)
             game = root / "game"
             (game / "bin").mkdir(parents=True)
@@ -80,9 +80,9 @@ class FolderTests(unittest.TestCase):
             builder = root / "builder"
             builder.write_text("#!/bin/sh\nprintf '%%s\\n' \"$0\" \"$@\" > '%s'\n" % started, encoding="utf-8")
             builder.chmod(0o755)
-            (game / "longshot_version.txt").write_text("version=v1\nbuilder=%s\n" % builder, encoding="utf-8")
-            script = game / "longshot"
-            shutil.copyfile(ROOT / "builder" / "linux" / "longshot-folder", script)
+            (game / "hookshot_version.txt").write_text("version=v1\nbuilder=%s\n" % builder, encoding="utf-8")
+            script = game / "hookshot"
+            shutil.copyfile(ROOT / "builder" / "linux" / "hookshot-folder", script)
             script.chmod(0o755)
             env = os.environ.copy()
             ran = subprocess.run([str(script)], env=env, check=False, text=True, capture_output=True)
@@ -92,15 +92,15 @@ class FolderTests(unittest.TestCase):
             self.assertEqual(lines[2], str(game))
 
     def test_the_folder_launcher_starts_the_game_when_its_builder_is_gone(self):
-        with tempfile.TemporaryDirectory(prefix="longshot-folder-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="hookshot-folder-") as tmp:
             root = Path(tmp)
             game = root / "game"
             (game / "bin").mkdir(parents=True)
-            (game / "bin" / "longshot").write_text("#!/bin/sh\nprintf 'game\\n'\n", encoding="utf-8")
-            (game / "bin" / "longshot").chmod(0o755)
-            (game / "longshot_version.txt").write_text("version=v1\nbuilder=%s\n" % (root / "gone"), encoding="utf-8")
-            script = game / "longshot"
-            shutil.copyfile(ROOT / "builder" / "linux" / "longshot-folder", script)
+            (game / "bin" / "hookshot").write_text("#!/bin/sh\nprintf 'game\\n'\n", encoding="utf-8")
+            (game / "bin" / "hookshot").chmod(0o755)
+            (game / "hookshot_version.txt").write_text("version=v1\nbuilder=%s\n" % (root / "gone"), encoding="utf-8")
+            script = game / "hookshot"
+            shutil.copyfile(ROOT / "builder" / "linux" / "hookshot-folder", script)
             script.chmod(0o755)
             env = os.environ.copy()
             ran = subprocess.run([str(script)], env=env, check=False, text=True, capture_output=True)
@@ -114,7 +114,7 @@ class FolderTests(unittest.TestCase):
         script = (ROOT / "scripts" / "linux" / "deps.sh").read_text(encoding="utf-8")
         start = script.index("for f in crt1.o ")
         loop = script[start:script.index("\n    done", start) + len("\n    done")]
-        with tempfile.TemporaryDirectory(prefix="longshot-sysroot-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="hookshot-sysroot-") as tmp:
             root = Path(tmp)
             system = root / "system"
             system.mkdir()

@@ -1,8 +1,8 @@
 /* Guest memory map: the system region (our own objects), the heap, address regions.
    The whole 4 GB window is committed up front (hos_main.c), so "mapping" here is only bookkeeping and zeroing. */
 #include "hos.h"
-#ifndef LONGSHOT_ENV_H   /* (env_on: the switches' one rule) */
-#include "../gpu/vk/compat/longshot_env.h"
+#ifndef HOOKSHOT_ENV_H   /* (env_on: the switches' one rule) */
+#include "../gpu/vk/compat/hookshot_env.h"
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +57,7 @@ void hos_mem_init(uint64_t image_end) {
 
 uint64_t hos_region_floor(void) { return region_floor; }
 
-/* (longshot, the control bridge: host/control.c) Whether [addr, addr + size) is wholly inside memory the runtime has
+/* (hookshot, the control bridge: host/control.c) Whether [addr, addr + size) is wholly inside memory the runtime has
    mapped for the game: the image, the system region in use (our own objects), the heap, or an address region. A read or
    write outside it is refused, never faulted. The classes it may fall in (0 none): */
 enum { HOS_MEM_IMAGE = 1, HOS_MEM_SYSTEM, HOS_MEM_HEAP, HOS_MEM_REGION };
@@ -146,7 +146,7 @@ static void pages_mark_used_locked(uint64_t addr, uint64_t size) {
 }
 
 static void discard_pages(uint64_t addr, uint64_t size) {
-    if (!hos_guest_range(addr, size)) return;   /* (longshot: guest pages only; Linux's discard zeroes what it is given) */
+    if (!hos_guest_range(addr, size)) return;   /* (hookshot: guest pages only; Linux's discard zeroes what it is given) */
     const uint64_t lo = (addr + 0xFFF) & ~0xFFFULL, hi = (addr + size) & ~0xFFFULL;
     static int keep = -1;
     if (keep < 0) keep = env_on("HOS_KEEP_FREED_PAGES");
@@ -173,7 +173,7 @@ static void discard_pages(uint64_t addr, uint64_t size) {
 #endif
 }
 
-/* (longshot) the address regions (hos_region_alloc's), at most cap of them into out ({start, end}); how many there are. For
+/* (hookshot) the address regions (hos_region_alloc's), at most cap of them into out ({start, end}); how many there are. For
    host/prompts.c: where the game keeps its resources */
 int hos_regions(uint64_t (*out)[2], int cap) {
     LOCK();
@@ -212,7 +212,7 @@ void hos_mark_written(const void *p, size_t n) {
 }
 #endif
 
-/* (longshot) a heap of size bytes ends below the address regions and the guest window's end (no wrap-around: the size
+/* (hookshot) a heap of size bytes ends below the address regions and the guest window's end (no wrap-around: the size
    comes from the game). Also svc SetHeapSize's check (hos_svc.c) */
 int hos_heap_size_fits(uint64_t size) {
     const uint64_t limit = region_floor < HOS_SPACE_END ? region_floor : HOS_SPACE_END;
@@ -239,7 +239,7 @@ HLE(_ZN2nn2os17SetMemoryHeapSizeEm) {
         for (uint64_t a = HOS_HEAP_BASE + hos_heap_size; a < HOS_HEAP_BASE + size; a += 4096) *(volatile uint8_t *)GP(a) = 0;
         hos_log("heap: %llu MB prefaulted in %.0f ms", (unsigned long long)((size - hos_heap_size) >> 20), (hos_now_ns() - t0) / 1e6);
     }
-    /* (longshot) Windows: the heap is left reserved and committed as it is touched (mkw_glue.c commit_on_touch), not all at
+    /* (hookshot) Windows: the heap is left reserved and committed as it is touched (mkw_glue.c commit_on_touch), not all at
        once. OoT asks for ~6.9 GB and touches a fraction of it; committed, all of it counted against RAM plus the page file
        (a 12 GB commit charge at the title screen against a 5 GB working set), and players hit "out of memory" with GBs of
        RAM free. Host calls that hand guest memory to the kernel (nn_fs.c ReadFile/WriteFile) commit their range first.
@@ -288,7 +288,7 @@ HLE(_ZN2nn2os17FreeAddressRegionEm) {
     RET(0);
 }
 
-/* (longshot, 11-13) The pages the game holds through AllocateMemoryPages, counted. On the console they come out of the same
+/* (hookshot, 11-13) The pages the game holds through AllocateMemoryPages, counted. On the console they come out of the same
    memory as the heap: the application's total (hos_total_memory, 9809 MB) less the heap is all it can map, and past that
    AllocateMemoryPages fails. Here it never did, and OoT held 8.4 GB of mapped pages beside a 6.9 GB heap (13 GB of guest
    memory resident, a working set of 19.6 GB, against the console's 12 GB in all). One bit a 4 KB page of the guest window,
@@ -331,7 +331,7 @@ static void pages_report_locked(void) {
     }
 }
 
-/* (longshot) what the game is told it uses: base (its program, and the system's share) plus the heap and its mapped pages;
+/* (hookshot) what the game is told it uses: base (its program, and the system's share) plus the heap and its mapped pages;
    base alone with HOS_MEMINFO_OLD=1. QueryMemoryInfo below, and svc GetInfo's used memory (hos_svc.c). Never more than the
    console's total: nothing refuses AllocateMemoryPages by default (HOS_PAGES_LIMIT), and past the total the game's
    free = total - used would wrap to a huge figure and it would map without limit again */
@@ -350,7 +350,7 @@ uint64_t hos_used_memory(uint64_t base) {
 HLE(_ZN2nn2os19AllocateMemoryPagesEmm) {
     HOS_TRACE_CALL("AllocateMemoryPages");
     const uint64_t a = ARG(0), n = ARG(1), end = a + n;
-    if (!hos_guest_range(a, n)) {   /* (longshot: a range that wrapped around was zeroed whole, past the guest window) */
+    if (!hos_guest_range(a, n)) {   /* (hookshot: a range that wrapped around was zeroed whole, past the guest window) */
         hos_log("AllocateMemoryPages(%#llx, %#llx): outside the guest window", (unsigned long long)a, (unsigned long long)n);
         RET(0xCA01);   /* svc::ResultOutOfMemory */
         return;
@@ -413,12 +413,12 @@ HLE(_ZN2nn2os19AllocateMemoryPagesEmm) {
 /* nn::os::FreeMemoryPages(unsigned long, unsigned long) -> Result */
 HLE(_ZN2nn2os15FreeMemoryPagesEmm) {
     HOS_TRACE_CALL("FreeMemoryPages");
-    if (!hos_guest_range(ARG(0), ARG(1))) {   /* (longshot: decommitted or discarded: guest pages only) */
+    if (!hos_guest_range(ARG(0), ARG(1))) {   /* (hookshot: decommitted or discarded: guest pages only) */
         hos_log("FreeMemoryPages(%#llx, %#llx): outside the guest window", (unsigned long long)ARG(0), (unsigned long long)ARG(1));
         RET(0xCA01);
         return;
     }
-    LOCK();   /* (longshot: no longer counted against the console's total, AllocateMemoryPages above) */
+    LOCK();   /* (hookshot: no longer counted against the console's total, AllocateMemoryPages above) */
     mapped_bytes -= (uint64_t)pages_count_locked(ARG(0), ARG(1), 0);
     pages_report_locked();
     UNLOCK();
@@ -449,7 +449,7 @@ HLE(_ZN2nn2os15QueryMemoryInfoEPNS0_10MemoryInfoE) {
     uint64_t info = ARG(0);
     HOS_TRACE_CALL("QueryMemoryInfo");
     G64(info + 0x00) = hos_total_memory;                       /* total available */
-    /* total used: program + system, and (longshot, 11-13) the heap and the pages the game has mapped, as Horizon counts it.
+    /* total used: program + system, and (hookshot, 11-13) the heap and the pages the game has mapped, as Horizon counts it.
        OoT's resource memory (0x8080f010) takes total - used as what it may still map, before each AllocateMemoryPages: with
        program + system alone it read ~9.6 GB free whatever it held, and mapped 7.9 GB of pages beside its 6.9 GB heap in 15
        minutes of play (2.9 GB is all the console leaves it), never giving any back. HOS_MEMINFO_OLD=1: program + system, as before */

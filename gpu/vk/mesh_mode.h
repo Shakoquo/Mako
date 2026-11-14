@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// (longshot, #1001, #1971) How the game's task and mesh programs run: 0 Automatic (the GPU's own mesh shaders where it has
+// (hookshot, #1001, #1971) How the game's task and mesh programs run: 0 Automatic (the GPU's own mesh shaders where it has
 // them, the compute fallback where not, and for the task + mesh draws of the GPUs task_mesh_fallback_default names on
 // Windows), 1 Native (no fallback where there are mesh shaders), 2 Compute (the fallback on every GPU). A launch switch,
 // RX_VK_MESH_SHADERS: the Graphics tab's Mesh shaders row is gone, as changing it translated every shader again and
-// dropped the pipeline caches for no gain a player could see. Its old line in longshot_options.ini, mesh_shaders=, no
+// dropped the pipeline caches for no gain a player could see. Its old line in hookshot_options.ini, mesh_shaders=, no
 // longer chooses. Nothing of Vulkan here: tests/test_mesh_mode_switch.py, tests/test_task_mesh_fallback_devices.py.
 #pragma once
 #include <cctype>
@@ -34,7 +34,7 @@ inline Choice choose(const char* env, const char* force_fallback) {
     return {0, "the default"};
 }
 
-/// A line of longshot_options.ini: the old row's mesh_shaders= with Native (1) or Compute (2), which is no longer
+/// A line of hookshot_options.ini: the old row's mesh_shaders= with Native (1) or Compute (2), which is no longer
 /// read (the log says so once, and the menu's next save drops the line). *value: what it held
 inline bool old_ini_choice(const char* line, int* value) {
     if (std::strncmp(line, "mesh_shaders=", 13)) return false;
@@ -42,13 +42,13 @@ inline bool old_ini_choice(const char* line, int* value) {
     return *value == 1 || *value == 2;   // (what the row read: 0 to 2, anything else Automatic)
 }
 
-/// (longshot, https://github.com/NotRexed/Hookshot/issues/996) The GPUs whose task + mesh draws take the compute fallback by
+/// (hookshot, https://github.com/NotRexed/Hookshot/issues/996) The GPUs whose task + mesh draws take the compute fallback by
 /// default; vk_main.cpp asks only on Windows, where AMD's driver timed out on the native task + mesh path of RDNA 2. Navi 22
 /// first (an RX 6700 XT), then Navi 21: on an RX 6800 XT (driver 0x800161) the native path lost the device within minutes at
 /// Hyrule Castle's entrance, while the fallback played 25 minutes there with none. Navi 23: an RX 6600 (driver 0x800161)
 /// lost the device on the session's first task + mesh draws (reported in Mako by sharkiix, no log published); another RX 6600
 /// on the same driver played 15-20 minutes on the native path and lost the device only at the driver's VRAM limit
-/// (https://git.magicbean.dev/MagicBeanDev/Longshot/issues/130); the fallback costs VRAM of its own (fallback_buffers_of,
+/// (https://git.magicbean.dev/MagicBeanDev/Hookshot/issues/130); the fallback costs VRAM of its own (fallback_buffers_of,
 /// vk_draw.cpp). Navi 24 (0x743f: RX 6400, 6500 XT; 0x7421 to 0x7424: RX 6300, Pro W6300 to W6500M) is not on by default: no
 /// report, 4 GB cards. RX_VK_TASK_MESH_FALLBACK=1 to try.
 /// Which IDs a chip brings: all its IDs that the PCI ID database (pci-ids.ucw.cz) or libdrm's amdgpu.ids name a card for,

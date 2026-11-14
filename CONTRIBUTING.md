@@ -1,10 +1,10 @@
-# Contributing to Longshot
+# Contributing to Hookshot
 
-Longshot is a static recompilation of a supported console game: the game's AArch64
+Hookshot is a static recompilation of a supported console game: the game's AArch64
 code is lifted to C, the Horizon OS and NVN2 are implemented natively, and the GPU work is replayed on Vulkan. No
 emulator is involved, and the game is built on your PC from your own copy.
 
-It lives on the team's Forgejo, [git.magicbean.dev/MagicBeanDev/Longshot](https://git.magicbean.dev/MagicBeanDev/Longshot).
+It lives on the team's Forgejo, [git.magicbean.dev/MagicBeanDev/Hookshot](https://git.magicbean.dev/MagicBeanDev/Hookshot).
 This page gets you set up, then covers what to send, how to build and test it, and the rules that keep the project
 out of trouble. The [development guide](docs/development.md) has the full pipeline; the [design notes](docs/design.md)
 have the architecture.
@@ -16,12 +16,12 @@ will. That includes:
 
 - the `.nup`, `romfs`, `exefs`, `.nso`, `.nca`, `.nsp`, `.xci` or `.nsz`/`.xcz` files, and any title keys;
 - `work/` and everything in it: the extracted dump, `image.bin`, the lifted C, test builds, runs and screenshots;
-- `longshot.exe`, `longshot_vk.dll` and other build output, and the game folder's `cache/` (`longshot_programs.bin` and
-  its `.idx`, `longshot_pipelines.bin`, `longshot_vk_pipelines.bin`);
-- saves (`user/`), `longshot_options.ini`, `longshot_env.txt` and `language.txt`.
+- `hookshot.exe`, `hookshot_vk.dll` and other build output, and the game folder's `cache/` (`hookshot_programs.bin` and
+  its `.idx`, `hookshot_pipelines.bin`, `hookshot_vk_pipelines.bin`);
+- saves (`user/`), `hookshot_options.ini`, `hookshot_env.txt` and `language.txt`.
 
 Don't ask in an issue, a pull request or the chat where to get the game, how to decrypt it, or for someone else's
-files. A screenshot, a video and `longshot_log.txt` are fine and often necessary: the log holds no game data.
+files. A screenshot, a video and `hookshot_log.txt` are fine and often necessary: the log holds no game data.
 `.gitignore` covers most of this, but check `git status` (or `jj status`) before you commit. If you aren't sure whether
 a file is game data, leave it out.
 
@@ -32,11 +32,11 @@ Five minutes, then a first build.
 1. **Clone:**
 
    ```
-   git clone --depth 1 https://git.magicbean.dev/MagicBeanDev/Longshot.git
-   cd Longshot
+   git clone --depth 1 https://git.magicbean.dev/MagicBeanDev/Hookshot.git
+   cd Hookshot
    ```
 
-   (jj users: `jj git clone --colocate --depth 1 https://git.magicbean.dev/MagicBeanDev/Longshot.git`.)
+   (jj users: `jj git clone --colocate --depth 1 https://git.magicbean.dev/MagicBeanDev/Hookshot.git`.)
 
    `--depth 1` fetches the newest commit only, not the whole history: about half the download, and half the work for
    git.magicbean.dev. `git pull`, branches and pull requests work as usual. What needs the history: `git log` and
@@ -51,7 +51,7 @@ Five minutes, then a first build.
 
    Click **Sign in with Discord** (or sign in with the email account you made on git.magicbean.dev) and approve. That
    one sign-in covers git.magicbean.dev (git signs in by itself from then on, and the remote `forge` points at
-   Longshot), the team chat and [test requests](docs/test-requests.md). The first time creates your account.
+   Hookshot), the team chat and [test requests](docs/test-requests.md). The first time creates your account.
    [docs/forge.md](docs/forge.md) has the details and the other commands.
 
 3. **Check the game-free tests run** (no game needed):
@@ -72,21 +72,21 @@ break.
 
 | | What |
 |---|---|
-| **Test on other hardware** | NVIDIA cards are the most tested; the README's [status table](README.md#project-status) says what works where, and the [tested configurations catalogue](https://longshot.magicbean.dev/tested-configurations/) lists the runs behind it. Reports from AMD and Intel cards, other drivers, other distributions and SteamOS help even when everything works. Pull requests that need a run on your hardware are queued as [test requests](docs/test-requests.md). |
+| **Test on other hardware** | NVIDIA cards are the most tested; the README's [status table](README.md#project-status) says what works where, and the [tested configurations catalogue](https://hookshot.magicbean.dev/tested-configurations/) lists the runs behind it. Reports from AMD and Intel cards, other drivers, other distributions and SteamOS help even when everything works. Pull requests that need a run on your hardware are queued as [test requests](docs/test-requests.md). |
 | **Play further** | The tested area is the start of the game. Reaching new areas, cutscenes, menus and items finds problems nobody has seen. |
-| **Report what is broken** | Use the [issue forms](https://git.magicbean.dev/MagicBeanDev/Longshot/issues/new/choose): game problem, install or build problem, save problem or idea. Include the version, your hardware, where you were and `longshot_log.txt`. |
+| **Report what is broken** | Use the [issue forms](https://git.magicbean.dev/MagicBeanDev/Hookshot/issues/new/choose): game problem, install or build problem, save problem or idea. Include the version, your hardware, where you were and `hookshot_log.txt`. |
 | **Send a fix** | Branch, fix, test, open a pull request from your fork ([how](#commits-and-pull-requests)). Small, focused changes are the easiest to review. |
 | **Improve the docs** | The README, the development guide and the design notes are part of the project. |
 
 ## Before you open an issue or a PR
 
 - Try current `main` first: it has every fix so far.
-- Search the [open issues](https://git.magicbean.dev/MagicBeanDev/Longshot/issues). If yours is there, add your
+- Search the [open issues](https://git.magicbean.dev/MagicBeanDev/Hookshot/issues). If yours is there, add your
   details instead of opening another.
 - English, please. One topic per issue or pull request.
-- Report the version you actually ran: the first line of `longshot_log.txt`.
+- Report the version you actually ran: the first line of `hookshot_log.txt`.
 - For a graphics or performance problem, test without ReShade, shader-cache tools, overlays and frame-generation
-  injectors: they change what Longshot does.
+  injectors: they change what Hookshot does.
 
 ## Development setup
 
@@ -96,7 +96,7 @@ memory, see the README's [requirements](README.md#what-you-need): the game alone
 build, driver and scene. Build on an SSD if you can: a hard drive works but takes much longer.
 
 Where a step below needs files from the Builder, use the Windows builder of the newest
-[Longshot release](https://git.magicbean.dev/MagicBeanDev/Longshot/releases).
+[Hookshot release](https://git.magicbean.dev/MagicBeanDev/Hookshot/releases).
 
 ### Windows
 
@@ -107,16 +107,16 @@ Where a step below needs files from the Builder, use the Windows builder of the 
    python -m pip install -r requirements.txt
    ```
 
-2. Get [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) (the `ucrt-x86_64` build) and set `LONGSHOT_MINGW` to its
+2. Get [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) (the `ucrt-x86_64` build) and set `HOOKSHOT_MINGW` to its
    folder. Without it the build falls back to emsdk's clang at `C:\emsdk` with Visual Studio's C++ tools and the
-   Windows SDK (`LONGSHOT_MSVC=1` forces that route).
+   Windows SDK (`HOOKSHOT_MSVC=1` forces that route).
 
 3. Copy what a clone doesn't carry from the Builder's `tools` folder. Run the Builder once; the folder is
-   `%LOCALAPPDATA%\LongshotBuilder\versions\<version>\LongshotBuilder\tools`.
+   `%LOCALAPPDATA%\HookshotBuilder\versions\<version>\HookshotBuilder\tools`.
 
    | From `tools` | To | Variable |
    |---|---|---|
-   | `cpm` | anywhere | `RX_CPM` points at it (Vulkan headers and FFmpeg; without it the standalone build stops, unless system headers or `LONGSHOT_*_HEADERS` are set) |
+   | `cpm` | anywhere | `RX_CPM` points at it (Vulkan headers and FFmpeg; without it the standalone build stops, unless system headers or `HOOKSHOT_*_HEADERS` are set) |
    | `wgpu-native` | anywhere | `WGPU_NATIVE` points at it (the WebGPU fallback renderer; without it the game has none) |
    | `third_party` | `third_party\` | its `.dll`, `.exe`, `.lib` and `.sha1` files, to the same places: `a64emit`, `lld-link`, `zbic` and SDL2 |
    | `work` | `work\` | hot-function list, link order, profile and icon (without them the game builds but runs slower) |
@@ -144,7 +144,7 @@ scripts/linux/docker.sh shell       # a shell in that environment, with the chec
 The container keeps its own `build-linux/docker-deps` and `build-linux/docker-vk-work` (parts built on the host link
 against its newer glibc). Where SELinux is enforcing, the script runs the container with
 `--security-opt label=disable` rather than relabelling your checkout. The AppImage needs glibc 2.35 or newer and a
-Vulkan 1.3 driver with mesh shaders. `LONGSHOT_JOBS` sets how many files compile at once. The README's
+Vulkan 1.3 driver with mesh shaders. `HOOKSHOT_JOBS` sets how many files compile at once. The README's
 [Linux section](README.md#on-linux) has the runtime paths.
 
 ### NVIDIA DLSS (optional)
@@ -152,26 +152,26 @@ Vulkan 1.3 driver with mesh shaders. `LONGSHOT_JOBS` sets how many files compile
 DLSS (`gpu/vk/vk_dlss.cpp`) is built in only with NVIDIA's DLSS SDK, which is NVIDIA's, under NVIDIA's own license,
 and is never committed, bundled or uploaded: not in a PR, not in a release, not in a CI artifact. Fetch it for your own
 builds (it prints NVIDIA's license notice and needs `--accept-nvidia-license` or a typed yes), then build with
-`LONGSHOT_NGX_SDK`:
+`HOOKSHOT_NGX_SDK`:
 
 ```powershell
 python -I scripts/ngx_sdk.py --platform windows C:\path\ngx-sdk
-$env:LONGSHOT_NGX_SDK = "C:\path\ngx-sdk"
-python -I nx2/make_game.py --nup "C:\path\your-game.nup" --out "C:\Games\Longshot-dlss"
+$env:HOOKSHOT_NGX_SDK = "C:\path\ngx-sdk"
+python -I nx2/make_game.py --nup "C:\path\your-game.nup" --out "C:\Games\Hookshot-dlss"
 ```
 
-On Windows, NVIDIA's static `nvsdk_ngx_s.lib` is linked into `longshot_vk.dll` (with `gpu/vk/vk_ngx_msvc_rt.cpp` and
+On Windows, NVIDIA's static `nvsdk_ngx_s.lib` is linked into `hookshot_vk.dll` (with `gpu/vk/vk_ngx_msvc_rt.cpp` and
 `host/mingw_msvc_shims.c` for the runtime it expects), and `make_game.py` copies `nvngx_dlss.dll` and
 `nvngx_dlssg.dll` into the game's `ngx` folder; never put NGX's core, `_nvngx.dll`, beside the game. On Linux it is
 `--platform linux` (or `scripts/linux/ngx-sdk.sh`). Never share a game folder built with the SDK. A change to the
-pinned SDK release updates `scripts/ngx_sdk.py`, `tests/test_ngx_sdk.py` and the release named in the Longshot
-Launcher's license text (MagicBeanDev/LongshotLauncher, `App/ViewModels/SettingsStepViewModel.cs`).
+pinned SDK release updates `scripts/ngx_sdk.py`, `tests/test_ngx_sdk.py` and the release named in the Hookshot
+Launcher's license text (MagicBeanDev/HookshotLauncher, `App/ViewModels/SettingsStepViewModel.cs`).
 
-### Longshot Builder
+### Hookshot Builder
 
-The Builder has no window: players use the [Longshot Launcher](https://longshot.magicbean.dev/download), which builds
+The Builder has no window: players use the [Hookshot Launcher](https://hookshot.magicbean.dev/download), which builds
 and starts the game. What is left is command-line only: on Windows a small .NET 8 program
-(`builder/LongshotBuilder`, `dotnet build builder/LongshotBuilder.sln`) whose `--cli` runs `nx2/make_game.py` with
+(`builder/HookshotBuilder`, `dotnet build builder/HookshotBuilder.sln`) whose `--cli` runs `nx2/make_game.py` with
 the release's own Python, for RecompLauncher through the setup (`builder/setup/setup.c`); on Linux the AppImage's
 `AppRun --cli` (`builder/linux`). Started any other way, both say to get the launcher. For a Builder that keeps its
 state on an external SSD, see [portable Builder setup](docs/windows-portable-builder.md).
@@ -180,12 +180,12 @@ state on an external SSD, see [portable Builder setup](docs/windows-portable-bui
 
 | Command | What it does |
 |---|---|
-| `python -I nx2/make_game.py --nup "C:\path\your-game.nup" --out "C:\Games\Longshot" --language en-US` | A complete game folder from a `.nup`, in about 15 minutes on a 12-core desktop ([build times](docs/development.md#build-times)). |
-| `python -I nx2/make_game.py --romfs "C:\path\romfs" --exefs "C:\path\exefs" --out "C:\Games\Longshot"` | The same, from extracted folders. |
+| `python -I nx2/make_game.py --nup "C:\path\your-game.nup" --out "C:\Games\Hookshot" --language en-US` | A complete game folder from a `.nup`, in about 15 minutes on a 12-core desktop ([build times](docs/development.md#build-times)). |
+| `python -I nx2/make_game.py --romfs "C:\path\romfs" --exefs "C:\path\exefs" --out "C:\Games\Hookshot"` | The same, from extracted folders. |
 | `python -I nx2/make_game.py --check --nup "C:\path\your-game.nup"` | Check the game and its version without building. |
 | `python -I nx2/dump.py --dump <folder with exefs/ and romfs/> --set` | Record the dump in `work/dump.txt`. |
 | `python -I nx2/lift.py --standalone --write` | Lift the game to C in `work/sa/gen`. |
-| `python -I nx2/build.py --standalone --jobs 4` | Compile `work/sa/build/longshot.exe` and `longshot_vk.dll`. |
+| `python -I nx2/build.py --standalone --jobs 4` | Compile `work/sa/build/hookshot.exe` and `hookshot_vk.dll`. |
 | `powershell -File scripts/run-vk.ps1 -Window -Seconds 120` | Run the standalone build and take screenshots in `work/runs/<name>/shots`. |
 | `python -I scripts/prof.py <stacks file>` | Read a profile sampled with `HOS_PROFILE`, `HOS_SAMPLE` and `HOS_SAMPLE_FILE`. |
 
@@ -254,7 +254,7 @@ for scripted input, screenshots, frame dumps and profiles are in the development
 - Keep game-specific code in new files where possible. `nx2/`, `host/` and `gpu/` stay close to mkw-recomp so upstream
   fixes apply as a patch; each sync names its mkw-recomp base commit in the commit message.
 - Don't modify `third_party/`: its parts are upstream copies with their notices in `PROVENANCE.md` (a64-kit's note lists
-  the changes Hookshot and Longshot made to it). Add a new folder and a provenance note instead. CI checks it
+  the changes Hookshot and Hookshot made to it). Add a new folder and a provenance note instead. CI checks it
   (`scripts/check_third_party.py`, `.forgejo/workflows/third-party.yml`): every part's files against the `tree-sha256`
   line its note ends with, a part with no note, and a pull request that changes a part without changing its note. For a
   deliberate refresh from upstream, say so in the part's note and run `python -I scripts/check_third_party.py --update
@@ -277,7 +277,7 @@ for scripted input, screenshots, frame dumps and profiles are in the development
 Every pull request uses the [pull request template](.forgejo/pull_request_template.md): its sections are the
 description, its checklist stays whole, and `forge.py pr ready` checks it before review.
 
-Longshot's `main` takes reviewed pull requests only. You work on a branch, push it to your fork and open the pull
+Hookshot's `main` takes reviewed pull requests only. You work on a branch, push it to your fork and open the pull
 request from there. Set up pushing once: `python -I scripts/forge.py fork` makes your fork and the remote
 `forge-fork` (`pr create` does it too if you haven't).
 
@@ -367,7 +367,7 @@ For the two sides to compare:
 - the actual log lines pasted, not only the numbers taken from them.
 
 The numbers come from the FPS counter's **Breakdown** or **Dev** level (Insert menu, Gameplay), the `fps` lines of
-`longshot_log.txt`, `RX_VK_DRAW_STATS`, or a test. A filled-in Measurements section, from a real run (a
+`hookshot_log.txt`, `RX_VK_DRAW_STATS`, or a test. A filled-in Measurements section, from a real run (a
 full one also names the driver, CPU, RAM, the settings and where each number comes from). This one compares against
 another baseline, so it names it:
 
@@ -389,7 +389,7 @@ How to reproduce: a save in that same outdoor area, Ultra preset, the FPS counte
 
 followed by the log lines themselves. Add one self-contained file under `docs/tested/` for each new run you measured,
 following [tested configurations](docs/tested-configurations.md). Leave the existing table frozen and do not commit
-the assembled view; the [website catalogue](https://longshot.magicbean.dev/tested-configurations/) combines both for readers.
+the assembled view; the [website catalogue](https://hookshot.magicbean.dev/tested-configurations/) combines both for readers.
 
 ### Pull request titles
 
@@ -432,7 +432,7 @@ accounts add no attribution); if you wrote the change yourself, there is nothing
 
 ## Licensing
 
-Longshot is free software under the [GNU General Public License, version 3 or later](LICENSE). By submitting a change
+Hookshot is free software under the [GNU General Public License, version 3 or later](LICENSE). By submitting a change
 you license it under those terms, so only send code you can license that way: nothing from a project with an
 incompatible license, and no decompiled game code or anything generated from the dump.
 
@@ -450,7 +450,7 @@ SDK is not one of them: it is never in the repository ([NVIDIA DLSS](#nvidia-dls
 
 - **Discord:** https://discord.gg/magicbean. Claim work and discuss pull requests in `#dev-work`; `#prs` shows every
   open pull request, kept up to date.
-- **Issues:** [the forms on git.magicbean.dev](https://git.magicbean.dev/MagicBeanDev/Longshot/issues/new/choose).
+- **Issues:** [the forms on git.magicbean.dev](https://git.magicbean.dev/MagicBeanDev/Hookshot/issues/new/choose).
 - **Agents:** [AGENTS.md](AGENTS.md); they post progress to the team chat (`scripts/team_chat.py`).
 
 Thanks for testing, reporting and sending fixes. Every report from a different GPU and every area played further than

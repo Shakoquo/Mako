@@ -16,7 +16,7 @@ static struct {
     void *CreateWindow, *SetWindowPosition, *SetWindowFullscreen, *SetRelativeMouseMode, *GetPrimaryDisplay,
         *GetDesktopDisplayMode, *Vulkan_CreateSurface, *PixelSize, *GetKeyboardState, *GetMouseState, *WaitEventTimeout,
         *PollEvent, *GetWindowSize, *LoadPNG, *SetWindowIcon, *DestroySurface, *GetWindowDisplay, *GetCurrentDisplayMode;
-    void *StartTextInput, *StopTextInput, *GetClipboardText;   /* (longshot: the menu's text fields; optional) */
+    void *StartTextInput, *StopTextInput, *GetClipboardText;   /* (hookshot: the menu's text fields; optional) */
     /* sound */
     void *OpenAudioDevice, *PauseAudioDevice, *OpenAudioDeviceStream, *ResumeAudioStreamDevice, *PutAudioStreamData;
     /* controllers */
@@ -36,7 +36,7 @@ static HMODULE load_one(const char *dll) {   /* beside the executable, else the 
     while (n && path[n - 1] != '\\' && path[n - 1] != '/') n--;
     snprintf(path + n, sizeof path - n, "%s", dll);
     HMODULE m = n ? LoadLibraryA(path) : NULL;   /* (no folder: a bare name would search the current folder and PATH) */
-#ifdef _WIN32   /* (longshot: else the system's, not the current folder's or PATH's) */
+#ifdef _WIN32   /* (hookshot: else the system's, not the current folder's or PATH's) */
     return m ? m : LoadLibraryExA(dll, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 #else
     return m ? m : LoadLibraryA(dll);
@@ -81,7 +81,7 @@ static int get_all(HMODULE m, int three) {
     *(FARPROC *)&f.SetHintPriority = GetProcAddress(m, "SDL_SetHintWithPriority");
     *(FARPROC *)&f.JoystickGUID = GetProcAddress(m, three ? "SDL_GetJoystickGUID" : "SDL_JoystickGetGUID");
     *(FARPROC *)&f.PadMapping = GetProcAddress(m, three ? "SDL_GetGamepadMapping" : "SDL_GameControllerMapping");
-    /* (longshot: the Insert menu's text fields; without them a field takes nothing from the keyboard here) */
+    /* (hookshot: the Insert menu's text fields; without them a field takes nothing from the keyboard here) */
     *(FARPROC *)&f.StartTextInput = GetProcAddress(m, "SDL_StartTextInput");
     *(FARPROC *)&f.StopTextInput = GetProcAddress(m, "SDL_StopTextInput");
     *(FARPROC *)&f.GetClipboardText = GetProcAddress(m, "SDL_GetClipboardText");
@@ -140,7 +140,7 @@ void hos_sdl_hint(const char *name, const char *value) {
     if (version == 3) CALL(_Bool (*)(const char *, const char *), SetHint)(name, value);
     else CALL(int (*)(const char *, const char *), SetHint)(name, value);
 }
-/* (longshot) a hint over the environment's own (SDL_HINT_OVERRIDE, 2 in both): a variable Steam sets for the games it
+/* (hookshot) a hint over the environment's own (SDL_HINT_OVERRIDE, 2 in both): a variable Steam sets for the games it
    starts wins over SDL_SetHint. 0 when the SDL has no SDL_SetHintWithPriority */
 int hos_sdl_hint_override(const char *name, const char *value) {
     if (!hos_sdl_load() || !f.SetHintPriority) return 0;
@@ -186,7 +186,7 @@ void hos_sdl_relative_mouse(void *window, int on) {
     else CALL(int (*)(int), SetRelativeMouseMode)(on);
 }
 int hos_sdl_desktop_size(int *width, int *height) {
-    /* (longshot) no SDL loaded (a windowless start: HOS_HEADLESS), so the screen is unknown. The menu asks while it runs
+    /* (hookshot) no SDL loaded (a windowless start: HOS_HEADLESS), so the screen is unknown. The menu asks while it runs
        (MkwVkHost.screen_size, rx_backend.c), and SDL2's branch below would call an empty slot */
     if (!version) return 0;
     if (version == 3) {   /* (SDL_DisplayMode: displayID, format, w and h at 8 and 12 in screen units, pixel_density at
@@ -461,7 +461,7 @@ int hos_sdl_audio_channels(void) {
     return n > 0 ? n : 2;
 }
 
-/* ---- (longshot) microphones: SDL3's recording devices, or SDL2's capture devices (the Linux AppImage carries SDL2): a
+/* ---- (hookshot) microphones: SDL3's recording devices, or SDL2's capture devices (the Linux AppImage carries SDL2): a
    stream each opened, in the format asked for, read as the game asks ---- */
 static struct {
     void *GetDevices, *DeviceName, *Available, *GetData, *Clear, *Destroy;   /* (SDL3) */

@@ -2,10 +2,10 @@
 # dav1d for the Windows game, in the CPM cache layout nx2/build.py reads: <cpm>/dav1d/<version>/{include,lib/libdav1d.a}.
 # The CPM cache's FFmpeg has no AV1 decoder, so without it OoT's AV1 movies go to Media Foundation, the software decoder of
 # Microsoft's AV1 Video Extension (a Store download where it is missing), and stutter behind their sound (issue 2316). With
-# it, host/dav1d_av1.c decodes them, as dav1d does on Linux. Built with llvm-mingw (the builder's own compiler: LONGSHOT_MINGW),
+# it, host/dav1d_av1.c decodes them, as dav1d does on Linux. Built with llvm-mingw (the builder's own compiler: HOOKSHOT_MINGW),
 # static, from the same dav1d release and source tree as scripts/linux/deps.sh pins. Runs on Linux or in MSYS2.
 #
-#   LONGSHOT_MINGW=<llvm-mingw folder> scripts/windows/dav1d.sh [<cpm folder>, default $RX_CPM, else build-windows/cpm]
+#   HOOKSHOT_MINGW=<llvm-mingw folder> scripts/windows/dav1d.sh [<cpm folder>, default $RX_CPM, else build-windows/cpm]
 #
 # CI does not run it: the Windows builder gets dav1d from tools.lock's CPM cache (the cpm package), and build-windows.yml
 # checks that package's dav1d under Wine. This is how a maintainer makes the package's dav1d, then adds it with
@@ -15,7 +15,7 @@
 # it made: the same pins, llvm-mingw and nasm give the same file.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-MINGW=${LONGSHOT_MINGW:?set LONGSHOT_MINGW to an llvm-mingw folder (the ucrt-x86_64 build)}
+MINGW=${HOOKSHOT_MINGW:?set HOOKSHOT_MINGW to an llvm-mingw folder (the ucrt-x86_64 build)}
 CPM=${1:-${RX_CPM:-$PWD/build-windows/cpm}}
 eval "$(grep -E '^(DAV1D_VER|DAV1D_TREE)=' scripts/linux/deps.sh)"
 OUT=$CPM/dav1d/$DAV1D_VER

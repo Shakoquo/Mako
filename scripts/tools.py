@@ -1,22 +1,22 @@
-"""tools.lock: the build tools the Longshot Builders need, for Windows (windows-x64) and Linux (linux-x64) (docs/releases.md,
+"""tools.lock: the build tools the Hookshot Builders need, for Windows (windows-x64) and Linux (linux-x64) (docs/releases.md,
 "tools.lock"; RELEASING.md, "Bump a tool"). Python's standard library only. --system picks a system's lines (windows-x64
 unless named); the Linux builder reads its lines with this file too (builder/linux/linux_tools.py).
 
     python -I scripts/tools.py check [--require <name> ...]
         reads tools.lock and refuses a bad line (a name, a SHA-256, a size, a path that leaves the install, a link that is not
         https) or a missing tool. The release workflow requires every tool each builder needs (REQUIRED), and each line's
-        copy in Longshot's store to be there with its size and SHA-256 (the package API)
+        copy in Hookshot's store to be there with its size and SHA-256 (the package API)
     python -I scripts/tools.py fetch <name> [--system <s>] [--cache <folder>]
         the tool's archive, from the first of its URLs that answers, checked by its size and SHA-256; prints its path
     python -I scripts/tools.py install <install folder> [--system <s>] [--cache <folder>] [--only <name> ...]
         every tool of the system (or the ones named) unpacked into a builder install, as the setup and the launcher do:
         <prefix> of the archive becomes <dest>
     python -I scripts/tools.py mirror <name> [--system <s>]
-        puts the tool's archive, fetched from its URLs, in Longshot's store (the organization's generic package
+        puts the tool's archive, fetched from its URLs, in Hookshot's store (the organization's generic package
         <name>-<system>, version <version>, file <sha256>-<name>.zip), and makes that copy its line's first URL, the others
         the fallback ($RELEASE_TOKEN: your own token)
     python -I scripts/tools.py add <name> <version> <archive> --dest <folder> [--prefix <folder in the archive>] [--system <s>]
-        an archive Longshot made, uploaded to Longshot's store and written into tools.lock in place of the tool's line
+        an archive Hookshot made, uploaded to Hookshot's store and written into tools.lock in place of the tool's line
     python -I scripts/tools.py pack <folder> --out <zip>
         a folder as a tool's archive, under its own name: its files with their modes (executable or not) and its relative
         links, deterministic (scripts/linux/deps.sh tools packs the Linux builder's tools with it). Then `add` it
@@ -24,10 +24,10 @@ unless named); the Linux builder reads its lines with this file too (builder/lin
     python -I scripts/tools.py assemble cpm --add <CPM folder> --out <zip>
     python -I scripts/tools.py assemble third-party --from <archive with tools/third_party> --out <zip>
     python -I scripts/tools.py assemble profile --work <folder> --out <zip>
-        a new archive from the tool's current one with what Longshot adds: the pinned prompt packages (installed by this
+        a new archive from the tool's current one with what Hookshot adds: the pinned prompt packages (installed by this
         Python's pip for the archive's Python version and win_amd64), packages for the CPM cache (dav1d, scripts/windows/
         dav1d.sh), the prebuilt files of third_party (a64emit.dll, lld-link.exe, SDL2.dll, SDL3.dll, zbic.dll) only, or the
-        play profile (work/: longshot_pieces.prof, hot_funcs.txt, hot_order.txt, longshot.res; addresses and counts, no game
+        play profile (work/: hookshot_pieces.prof, hot_funcs.txt, hot_order.txt, hookshot.res; addresses and counts, no game
         data). Then `add` it. Each archive is deterministic: the same files give the same bytes
 """
 import argparse
@@ -46,7 +46,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOCK = os.path.join(ROOT, "tools.lock")
 CACHE = os.path.join(ROOT, "build-tools-cache")
-REPO = "MagicBeanDev/Longshot"
+REPO = "MagicBeanDev/Hookshot"
 SERVER = "https://git.magicbean.dev"
 # (the same files from Cloudflare's edge: git-cdn serves git.magicbean.dev's package paths from its R2 store, cached)
 CDN = "https://git-cdn.magicbean.dev"
@@ -150,14 +150,14 @@ def sha256_file(path):
 
 
 def get(url, timeout=600):
-    req = urllib.request.Request(url, headers={"User-Agent": "longshot-tools"})
+    req = urllib.request.Request(url, headers={"User-Agent": "hookshot-tools"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
 
 def download(url, path, size, progress=None, timeout=600):
     """url into path, streamed, stopped past size; its SHA-256. progress(bytes so far) after each block"""
-    req = urllib.request.Request(url, headers={"User-Agent": "longshot-tools"})
+    req = urllib.request.Request(url, headers={"User-Agent": "hookshot-tools"})
     h, have = hashlib.sha256(), 0
     with urllib.request.urlopen(req, timeout=timeout) as r, open(path, "wb") as f:
         for block in iter(lambda: r.read(1 << 20), b""):
@@ -362,7 +362,7 @@ def pack(folder, out):
     return sha, size
 
 
-# ---- assembling Longshot's own archives ----
+# ---- assembling Hookshot's own archives ----
 
 def assemble_python(tool, archive, requirements, out, pip=None):
     """The Python archive with requirements' pins (name==version) installed into Lib/site-packages, when it lacks one"""
@@ -428,7 +428,7 @@ def assemble_third_party(source, prefix, out, tracked):
     return result
 
 
-PROFILE = ("longshot_pieces.prof", "hot_funcs.txt", "hot_order.txt", "longshot.res", "longshot.ico")
+PROFILE = ("hookshot_pieces.prof", "hot_funcs.txt", "hot_order.txt", "hookshot.res", "hookshot.ico")
 
 
 def assemble_profile(work, out):
@@ -440,8 +440,8 @@ def assemble_profile(work, out):
     return result
 
 
-# ---- Longshot's store: Forgejo's generic package registry ----
-# Each archive Longshot keeps a copy of, or makes, is a file of a generic package of the MagicBeanDev organization (its
+# ---- Hookshot's store: Forgejo's generic package registry ----
+# Each archive Hookshot keeps a copy of, or makes, is a file of a generic package of the MagicBeanDev organization (its
 # Packages tab): the package <name>-<system>, its version the tool's version, the file <sha256>-<name>.zip. A package
 # version's files never change (Forgejo refuses a second upload of a name, HTTP 409), and nothing prunes them: an older
 # version's tools stay downloadable. Anyone downloads them, with no account (the organization is public). Each system has its
@@ -456,12 +456,12 @@ def package_url(tool, server=SERVER):
 
 
 def store_url(tool):
-    """The tool's copy in Longshot's store, as the package API names it (where it is uploaded and checked)"""
+    """The tool's copy in Hookshot's store, as the package API names it (where it is uploaded and checked)"""
     return package_url(tool)
 
 
 def store_urls(tool):
-    """tools.lock's first URLs for a tool in Longshot's store: the edge's copy, then the store's own address"""
+    """tools.lock's first URLs for a tool in Hookshot's store: the edge's copy, then the store's own address"""
     return [package_url(tool, CDN), package_url(tool)]
 
 
@@ -480,7 +480,7 @@ def exists(url, timeout=60):
     head = "%s/api/packages/%s/generic/" % (SERVER, OWNER)
     package, version, name = url[len(head):].split("/")
     req = urllib.request.Request("%s/api/v1/packages/%s/generic/%s/%s/files" % (SERVER, OWNER, package, version),
-                                 headers={"User-Agent": "longshot-tools", "Accept": "application/json"})
+                                 headers={"User-Agent": "hookshot-tools", "Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             files = json.load(r)
@@ -493,7 +493,7 @@ def exists(url, timeout=60):
 
 
 def store(path, tool):
-    """The archive at path, put in Longshot's store as the tool's copy (PUT; a copy there already, 409, is kept when it is the
+    """The archive at path, put in Hookshot's store as the tool's copy (PUT; a copy there already, 409, is kept when it is the
     same size: its bytes cannot change). FORGEJO_UPLOAD_API: the server without Cloudflare in front (its 100 MB limit), as
     <address>/api/v1. Returns the copy's URL"""
     url = store_url(tool)
@@ -503,7 +503,7 @@ def store(path, tool):
     size = os.path.getsize(path)
     with open(path, "rb") as f:
         req = urllib.request.Request(put, data=f, method="PUT", headers={
-            "Authorization": "token " + token, "User-Agent": "longshot-tools", "Content-Type": "application/zip",
+            "Authorization": "token " + token, "User-Agent": "hookshot-tools", "Content-Type": "application/zip",
             "Content-Length": str(size)})
         try:
             with urllib.request.urlopen(req, timeout=1800):
@@ -579,7 +579,7 @@ def main(argv=None):
                   file=sys.stderr)
             return 1
         if a.require is not None:
-            # (each copy in Longshot's store answers with its size: a line whose package was never uploaded fails here, not on
+            # (each copy in Hookshot's store answers with its size: a line whose package was never uploaded fails here, not on
             # every player's PC. Upstream fallbacks are not asked)
             gone = []
             for t in tools:
@@ -593,7 +593,7 @@ def main(argv=None):
                         gone.append("%s (%s): %s" % (t.name, t.system, "not there" if not there else
                                                      "%s bytes, SHA-256 %s" % (size, sha)))
             if gone:
-                print("error: not in Longshot's store as tools.lock names them: %s; RELEASING.md, Bump a tool" % "; ".join(gone),
+                print("error: not in Hookshot's store as tools.lock names them: %s; RELEASING.md, Bump a tool" % "; ".join(gone),
                       file=sys.stderr)
                 return 1
     elif a.cmd == "fetch":

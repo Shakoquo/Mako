@@ -1,8 +1,8 @@
 # Versioning
 
-Longshot follows [Semantic Versioning 2.0.0](https://semver.org/). Its first version is **v3.0.0**. Hookshot's versions
-(0.1.0 to 2.x, NotRexed/Hookshot) are Hookshot's history and are not Longshot versions. How a version is built, signed and
-published, and how the Longshot Launcher installs it, is in [releases.md](releases.md).
+Hookshot follows [Semantic Versioning 2.0.0](https://semver.org/). Its first version is **v3.0.0**. Hookshot's versions
+(0.1.0 to 2.x, NotRexed/Hookshot) are Hookshot's history and are not Hookshot versions. How a version is built, signed and
+published, and how the Hookshot Launcher installs it, is in [releases.md](releases.md).
 
 ## Versions and channels
 
@@ -13,22 +13,22 @@ published, and how the Longshot Launcher installs it, is in [releases.md](releas
 | `nightly` | `nightly-<commits since the fork>-<8 hex of the commit>`, e.g. `nightly-412-1a2b3c4d` | every push to `main` |
 
 The `v` belongs to the tag, not to the version. Build metadata is not used. A nightly's count starts at the fork, the commit
-that renamed the project (`e2a4d45`), so it says how far Longshot is past it. A build from a checkout is named by
+that renamed the project (`e2a4d45`), so it says how far Hookshot is past it. A build from a checkout is named by
 `git describe --tags --long` (`v3.0.0-3-g1a2b3c4`) or `dev`: it is on no channel, and the launcher never offers it as an
 update.
 
-One version covers the game (`longshot.exe` / `longshot`), the Vulkan back end, the lift pipeline and its scripts, and the
-builders: they are built from the same commit and released together. The **Longshot Launcher is released apart**, from
-MagicBeanDev/LongshotLauncher, with its own numbers (from v1.0.0) on the same three channels.
+One version covers the game (`hookshot.exe` / `hookshot`), the Vulkan back end, the lift pipeline and its scripts, and the
+builders: they are built from the same commit and released together. The **Hookshot Launcher is released apart**, from
+MagicBeanDev/HookshotLauncher, with its own numbers (from v1.0.0) on the same three channels.
 
 The order (the launcher's `Core/Versions.cs`): stables and release candidates in semver order (`v3.1.0-rc.1` <
 `v3.1.0-rc.2` < `v3.1.0`), nightlies by their count. A nightly and a stable are not ordered: the launcher never offers one
 as an update of the other, and a build stays on its channel unless the player picks another.
 
 The "public" surface the rules protect is the command line of `make_game.py` and the builders, the `RX_` and `HOS_`
-switches, the files a build writes into a game folder (`longshot_options.ini`, `longshot_env.txt`, `language.txt`,
-`longshot_version.txt`), saves, the release files' names, `SHA256SUMS` and `tools.lock`, `recomplauncher.json`, and the format of
-`longshot_log.txt`. The C sources and internal headers are not an API and may change in any release.
+switches, the files a build writes into a game folder (`hookshot_options.ini`, `hookshot_env.txt`, `language.txt`,
+`hookshot_version.txt`), saves, the release files' names, `SHA256SUMS` and `tools.lock`, `recomplauncher.json`, and the format of
+`hookshot_log.txt`. The C sources and internal headers are not an API and may change in any release.
 
 ## Choosing the next version
 
@@ -53,8 +53,8 @@ same commit). `python -I scripts/release.py next` prints the number and the note
 | Place | Where it comes from |
 |---|---|
 | the tag | the maintainer; the source of truth |
-| `longshot_log.txt` and the Insert menu | `nx2/version.py`: `LONGSHOT_VERSION`, then `VERSION`/`version.txt`, then `git describe --tags --match "v[0-9]*"` |
-| `longshot_version.txt` in a build | the `VERSION` file written when the tools are packaged (`nx2/make_game.py`) |
+| `hookshot_log.txt` and the Insert menu | `nx2/version.py`: `HOOKSHOT_VERSION`, then `VERSION`/`version.txt`, then `git describe --tags --match "v[0-9]*"` |
+| `hookshot_version.txt` in a build | the `VERSION` file written when the tools are packaged (`nx2/make_game.py`) |
 | the Windows builder's `VERSION` | the release workflow's name for the version (`scripts/builder_package.py zip`) |
 | the release | its tag; the release page and its files are named after it (docs/releases.md) |
 
@@ -63,7 +63,7 @@ builds of the same release apart, and it is the only identifier a build from a m
 
 ## The changelog
 
-Longshot keeps no changelog file. Its changes are on each release's page, written by git-cliff (`cliff.toml`,
+Hookshot keeps no changelog file. Its changes are on each release's page, written by git-cliff (`cliff.toml`,
 `scripts/release.py notes`) when it is released; nothing is committed back to `main`. Hookshot's history up to the fork
 (its entries up to 2.2.0-rc.1) stays in [NotRexed/Hookshot](https://github.com/NotRexed/Hookshot)'s
 [`CHANGELOG.md`](https://github.com/NotRexed/Hookshot/blob/main/CHANGELOG.md).

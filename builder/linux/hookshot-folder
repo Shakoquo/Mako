@@ -1,0 +1,31 @@
+#!/bin/sh
+# The game folder's launcher, what hookshot.exe is on Windows. The game itself is bin/hookshot. This file is copied to
+# hookshot in the folder (nx2/make_game.py).
+#
+# It starts the builder= line in hookshot_version.txt (what made this game: the Hookshot Launcher, or the builder AppImage
+# for a build with --cli, which plays it) with --launch <this folder>. When that one is gone, it starts the game.
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+builder_line() {
+    [ -f "$HERE/hookshot_version.txt" ] || return 1
+    path=
+    while IFS= read -r line || [ -n "$line" ]; do
+        case $line in
+            builder=*) path=${line#builder=} ;;
+        esac
+    done < "$HERE/hookshot_version.txt"
+    [ -n "$path" ] && [ -x "$path" ] || return 1
+    printf '%s\n' "$path"
+}
+
+run=$(builder_line || true)
+if [ -n "$run" ]; then
+    exec "$run" --launch "$HERE"
+fi
+if [ -x "$HERE/bin/hookshot" ]; then
+    cd "$HERE"
+    exec ./bin/hookshot
+fi
+echo "Hookshot: the game (bin/hookshot) is missing from this folder. Build it again with the Hookshot Launcher." >&2
+exit 1

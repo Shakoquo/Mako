@@ -11,7 +11,7 @@ requests for help, the same trail docs/workflow.md asks for, in a place both peo
 login signs in with Discord, through the team's one sign-in (magicbean_login.py, beside this script): it prints a
 link (and opens it unless --no-browser), and one trip through the browser signs you in to the team chat and to
 git.magicbean.dev (for pushing; see forge.py). The session is saved to the config folder (Linux:
-$XDG_CONFIG_HOME/longshot, default ~/.config/longshot; Windows: %APPDATA%\\Longshot; LONGSHOT_TEAM_CHAT_DIR overrides
+$XDG_CONFIG_HOME/hookshot, default ~/.config/hookshot; Windows: %APPDATA%\\Hookshot; HOOKSHOT_TEAM_CHAT_DIR overrides
 it) as team_chat.json, readable by you only. The first sign-in creates the account. --access-token-stdin saves a token copied
 from Element (Settings, Help & About, Access token) instead.
 
@@ -41,8 +41,8 @@ SERVER = "magicbean.dev"
 ROOM = "#agent-updates:magicbean.dev"
 MIN_INTERVAL_MINUTES = 60
 PREFIX = "\N{ROBOT FACE} "
-DEVICE_NAME = "Longshot agent"
-USER_AGENT = "longshot-team-chat/1"
+DEVICE_NAME = "Hookshot agent"
+USER_AGENT = "hookshot-team-chat/1"
 LOGIN_TIMEOUT = 300
 EXIT_REFUSED = 3
 

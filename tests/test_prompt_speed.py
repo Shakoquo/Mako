@@ -4,7 +4,7 @@
     decompressobj it replaced, with the romfs's kind of dictionary;
   - guide_route widens the lines that stay once for all the lines routed round the same image: the way it finds is the
     same as with the widening made afresh, and an image the cache does not hold is widened anew;
-  - face_jobs: LONGSHOT_PROMPT_JOBS first, else one process a face, at most the CPU threads and one per GB available
+  - face_jobs: HOOKSHOT_PROMPT_JOBS first, else one process a face, at most the CPU threads and one per GB available
     (each holds the 244 MB Common.bntx), and never none.
 
 python -I -B tests/test_prompt_speed.py
@@ -34,7 +34,7 @@ class ReadZs(unittest.TestCase):
         data = b"".join(rnd.choice(words) for _ in range(200000))   # (~1.5 MB, compressible as textures are)
         dictionary = b"".join(words) * 4
         zd = zstandard.ZstdCompressionDict(dictionary)
-        with tempfile.TemporaryDirectory(prefix="longshot-prompt-zs-") as romfs:
+        with tempfile.TemporaryDirectory(prefix="hookshot-prompt-zs-") as romfs:
             for name, sized in (("sized.zs", True), ("unsized.zs", False)):
                 with self.subTest(name):
                     frame = zstandard.ZstdCompressor(dict_data=zd, write_content_size=sized).compress(data)
@@ -82,7 +82,7 @@ class FaceJobs(unittest.TestCase):
         env = mock.patch.dict(os.environ)
         env.start()
         self.addCleanup(env.stop)
-        os.environ.pop("LONGSHOT_PROMPT_JOBS", None)
+        os.environ.pop("HOOKSHOT_PROMPT_JOBS", None)
 
     def jobs(self, faces, cpus, gb):
         with mock.patch.object(P.os, "cpu_count", return_value=cpus):
@@ -107,7 +107,7 @@ class FaceJobs(unittest.TestCase):
         self.assertEqual(self.jobs(5, 12, 0.4), 1)
 
     def test_the_variable_first(self):
-        os.environ["LONGSHOT_PROMPT_JOBS"] = "3"
+        os.environ["HOOKSHOT_PROMPT_JOBS"] = "3"
         self.assertEqual(self.jobs(5, 12, 0.4), 3)
 
 

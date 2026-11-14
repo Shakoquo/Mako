@@ -33,7 +33,7 @@ HEAD = r"""
 #include <thread>
 #include <utility>
 #include <vector>
-#include "compat/longshot_env.h"
+#include "compat/hookshot_env.h"
 
 // Only the collaborators outside pipeline-state construction are stood in.
 namespace Shader {
@@ -315,7 +315,7 @@ def main():
     end = source.index("    if (g_fine) fine_ns[FT_VERTEX]", start)
     # (draw() reads vertex_complete after the block: whether the occlusion query may count the draw)
     cache = cache.replace("/* BIND_VERTICES */", source[start:end] + "    (void)vertex_complete;\n")
-    with tempfile.TemporaryDirectory(prefix="longshot-fallback-pipeline-") as temp:
+    with tempfile.TemporaryDirectory(prefix="hookshot-fallback-pipeline-") as temp:
         cpp, exe = Path(temp) / "pipeline.cpp", Path(temp) / "pipeline.exe"
         cpp.write_text(fixture + cache + MAIN, encoding="utf-8")
         subprocess.run([args.cxx, "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",

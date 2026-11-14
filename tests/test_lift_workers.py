@@ -3,7 +3,7 @@
 A spawned worker (Windows) peaks at 395 MB over a whole lift, a forked one at ~2 GB. Checked here, with the cores and the
 available memory stood in:
   - forked: one process per 2 GB available; spawned: one per 0.75 GB; never more than the cores (at most 16), never none;
-  - LONGSHOT_LIFT_JOBS wins over both;
+  - HOOKSHOT_LIFT_JOBS wins over both;
   - where there is no fork, start_side runs the side work in a thread and end_side gives its result; a side run that
     raised is done again in the lift's own thread (as a failed forked process is); one process asked for: no side run.
 
@@ -27,7 +27,7 @@ class Case(unittest.TestCase):
         env = mock.patch.dict(os.environ)
         env.start()
         self.addCleanup(env.stop)
-        for k in ("LONGSHOT_LIFT_JOBS", "LONGSHOT_LIFT_NO_FORK"):
+        for k in ("HOOKSHOT_LIFT_JOBS", "HOOKSHOT_LIFT_NO_FORK"):
             os.environ.pop(k, None)
 
     def jobs(self, cores, gb, fork):
@@ -55,7 +55,7 @@ class Workers(Case):
         self.assertEqual(self.jobs(8, None, fork=False), 8)
 
     def test_lift_jobs_wins(self):
-        os.environ["LONGSHOT_LIFT_JOBS"] = "2"
+        os.environ["HOOKSHOT_LIFT_JOBS"] = "2"
         self.assertEqual(self.jobs(12, 30.0, fork=False), 2)
 
 

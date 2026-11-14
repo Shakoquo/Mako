@@ -1,4 +1,4 @@
-"""One store of compiled objects for every work folder on this PC (LONGSHOT_OBJ_STORE=<folder>; off when unset, empty or 0).
+"""One store of compiled objects for every work folder on this PC (HOOKSHOT_OBJ_STORE=<folder>; off when unset, empty or 0).
 
 A work folder keeps its own object cache (<work>/objcache: nx2/build.py's cache_put and compile_one, make_game.py's
 prune_object_cache) as before. With a store, build.py takes the objects this build needs and the folder lacks from the store
@@ -14,14 +14,14 @@ characters), and a work folder without the note uses no store.
 Nothing writes an object in place: the compiler writes a new file and renames it over the old one, and the folder's clean-up
 only removes its own links, so a store object stays whole while any folder uses it. The store's own clean-up (prune, after each
 make_game.py build): an object only the store holds (one link, or every object where there are none) goes once it has not been
-used for LONGSHOT_OBJ_STORE_DAYS (14), and the oldest go first while those come to more than LONGSHOT_OBJ_STORE_GB (8). An
+used for HOOKSHOT_OBJ_STORE_DAYS (14), and the oldest go first while those come to more than HOOKSHOT_OBJ_STORE_GB (8). An
 object used in the last hour is never taken, so a build that is fetching it keeps it.
 """
 import os
 import shutil
 import time
 
-STORE_ENV = "LONGSHOT_OBJ_STORE"
+STORE_ENV = "HOOKSHOT_OBJ_STORE"
 NOTE = "system_headers.txt"
 KEEP_DAYS, KEEP_GB = 14.0, 8.0
 RECENT_S = 3600
@@ -140,7 +140,7 @@ def prune(store_root=None, now=None):
     if not r or not os.path.isdir(r):
         return 0, 0
     now = time.time() if now is None else now
-    days, limit = _number("LONGSHOT_OBJ_STORE_DAYS", KEEP_DAYS), _number("LONGSHOT_OBJ_STORE_GB", KEEP_GB) * (1 << 30)
+    days, limit = _number("HOOKSHOT_OBJ_STORE_DAYS", KEEP_DAYS), _number("HOOKSHOT_OBJ_STORE_GB", KEEP_GB) * (1 << 30)
     alone = []   # (last used, size, path) of the objects only the store holds
     for sub in os.listdir(r):
         d = os.path.join(r, sub)

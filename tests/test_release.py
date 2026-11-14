@@ -1,8 +1,8 @@
-"""scripts/release.py (docs/releases.md, RELEASING.md; the same file in MagicBeanDev/LongshotLauncher), with no network: keys,
+"""scripts/release.py (docs/releases.md, RELEASING.md; the same file in MagicBeanDev/HookshotLauncher), with no network: keys,
 SHA256SUMS and its signature; the channels as the launcher reads them from the release list; the version a tag must reach
 (the bump from the commits since the last stable), in a git repository made here; the nightly's name; and publish and
 prune against a fake Forgejo on 127.0.0.1 (a draft first, every file uploaded and checked, published last; only nightlies
-pruned); the release page (the launcher's download links, Longshot's "download the launcher" notice, per channel); and the
+pruned); the release page (the launcher's download links, Hookshot's "download the launcher" notice, per channel); and the
 release a tag's commit already has (released-as: found by its tag's commit, taken only signed and whole).
 Needs git and the openssl command line.
 
@@ -55,20 +55,20 @@ class Keys(unittest.TestCase):
     def test_sums_sign_verify(self):
         files = self.dir / "files"
         files.mkdir()
-        (files / "LongshotLauncher-v1.0.0-x86_64.AppImage").write_bytes(b"launcher")
-        (files / "Longshot-v3.0.0-x86_64.AppImage").write_bytes(b"builder")
+        (files / "HookshotLauncher-v1.0.0-x86_64.AppImage").write_bytes(b"launcher")
+        (files / "Hookshot-v3.0.0-x86_64.AppImage").write_bytes(b"builder")
         run("sums", *files.iterdir(), "--out", files / "SHA256SUMS")
         sums = (files / "SHA256SUMS").read_text()
-        self.assertEqual(sums.splitlines()[0], "%s  Longshot-v3.0.0-x86_64.AppImage" % hashlib.sha256(b"builder").hexdigest())
+        self.assertEqual(sums.splitlines()[0], "%s  Hookshot-v3.0.0-x86_64.AppImage" % hashlib.sha256(b"builder").hexdigest())
         run("sign", files / "SHA256SUMS", "--key", self.key, "--out", files / "SHA256SUMS.sig")
         code, out = run("verify", files / "SHA256SUMS", "--pub", self.pub, "--files", files)
         self.assertEqual(code, 0)
         self.assertIn("every file", out)
         # (a file changed, the list changed, another key)
-        (files / "Longshot-v3.0.0-x86_64.AppImage").write_bytes(b"other")
+        (files / "Hookshot-v3.0.0-x86_64.AppImage").write_bytes(b"other")
         with self.assertRaises(SystemExit):
             run("verify", files / "SHA256SUMS", "--pub", self.pub, "--files", files)
-        (files / "SHA256SUMS").write_text(sums.replace("Longshot-v3", "Longshot-v4"))
+        (files / "SHA256SUMS").write_text(sums.replace("Hookshot-v3", "Hookshot-v4"))
         with self.assertRaises(SystemExit):
             run("verify", files / "SHA256SUMS", "--pub", self.pub)
         (files / "SHA256SUMS").write_text(sums)
@@ -108,7 +108,7 @@ class Keys(unittest.TestCase):
         (self.dir / "scripts" / "release_keys.json").write_text('{"keys": ["REVG"]}')
         cs.unlink()
         self.assertEqual(release.trusted_keys(str(self.dir)), [b"DEF"])
-        self.assertEqual(release.product_of(str(self.dir)), "longshot")
+        self.assertEqual(release.product_of(str(self.dir)), "hookshot")
 
 
 class Channels(unittest.TestCase):
@@ -157,7 +157,7 @@ class Bump(unittest.TestCase):
         self.git("tag", "v2.9.0")
         self.git("tag", "v3.0.0-rc.1")
         self.assertEqual(self.check("v3.0.0-rc.1"), [])
-        self.assertIn("is not vX.Y.Z", self.check("v2.9.0")[0])   # (Hookshot's numbers are not Longshot's)
+        self.assertIn("is not vX.Y.Z", self.check("v2.9.0")[0])   # (Hookshot's numbers are not Hookshot's)
         self.assertEqual(release.next_tag([], 3, root=str(self.dir)), "v3.0.0-rc.1")
 
     def test_the_bump(self):
@@ -256,26 +256,26 @@ class Bump(unittest.TestCase):
         self.assertEqual(args[-2:], ["--strip", "all"])
 
 class ReleasePage(unittest.TestCase):
-    """The release page publish writes: the launcher's starts with big download links to its own files; Longshot's with "to
-    play, get the Longshot Launcher", linking longshot.magicbean.dev's newest launcher of the same channel, and "don't download the
+    """The release page publish writes: the launcher's starts with big download links to its own files; Hookshot's with "to
+    play, get the Hookshot Launcher", linking hookshot.magicbean.dev's newest launcher of the same channel, and "don't download the
     files below" (above the builder files)"""
 
-    LAUNCHER = ("LongshotLauncher-%s-windows-x64-setup.exe", "LongshotLauncher-%s-windows-x64-portable.zip",
-                "LongshotLauncher-%s-x86_64.AppImage", "SHA256SUMS", "SHA256SUMS.sig")
-    LONGSHOT = ("LongshotBuilder-%s-windows-x64.zip", "Longshot-%s-x86_64.AppImage", "tools.lock", "SHA256SUMS", "SHA256SUMS.sig")
+    LAUNCHER = ("HookshotLauncher-%s-windows-x64-setup.exe", "HookshotLauncher-%s-windows-x64-portable.zip",
+                "HookshotLauncher-%s-x86_64.AppImage", "SHA256SUMS", "SHA256SUMS.sig")
+    HOOKSHOT = ("HookshotBuilder-%s-windows-x64.zip", "Hookshot-%s-x86_64.AppImage", "tools.lock", "SHA256SUMS", "SHA256SUMS.sig")
 
     def page(self, tag, product, files):
         names = [f % tag if "%s" in f else f for f in files]
-        return release.release_page(tag, product, "## %s\n\n### Fixes\n\n- a fix\n" % tag, names, "MagicBeanDev/LongshotLauncher")
+        return release.release_page(tag, product, "## %s\n\n### Fixes\n\n- a fix\n" % tag, names, "MagicBeanDev/HookshotLauncher")
 
     def test_the_launcher_page_links_its_own_files(self):
         for tag, channel in (("v1.0.0", "stable"), ("v1.1.0-rc.2", "rc"), ("nightly-10-968b7963", "nightly")):
             with self.subTest(tag):
                 page = self.page(tag, "launcher", self.LAUNCHER)
                 head, notes = page.split("\n---\n", 1)
-                base = "https://git-cdn.magicbean.dev/MagicBeanDev/LongshotLauncher/releases/download/%s/LongshotLauncher-%s" % (tag, tag)
+                base = "https://git-cdn.magicbean.dev/MagicBeanDev/HookshotLauncher/releases/download/%s/HookshotLauncher-%s" % (tag, tag)
                 self.assertEqual(head.strip().split("\n\n")[:4], [
-                    "# ⬇️ Download Longshot Launcher",
+                    "# ⬇️ Download Hookshot Launcher",
                     "### [🪟 &nbsp;Download for Windows](%s-windows-x64-setup.exe)" % base,
                     "### [🐧 &nbsp;Download for Linux (AppImage)](%s-x86_64.AppImage)" % base,
                     "Windows without installing: [portable zip](%s-windows-x64-portable.zip)" % base])
@@ -289,14 +289,14 @@ class ReleasePage(unittest.TestCase):
         self.assertNotIn("Download for Windows", page)
         self.assertNotIn("portable zip", page)
 
-    def test_the_longshot_page_sends_players_to_the_launcher_of_its_channel(self):
+    def test_the_hookshot_page_sends_players_to_the_launcher_of_its_channel(self):
         for tag, channel in (("v3.0.0", "stable"), ("v3.0.0-rc.1", "rc"), ("nightly-34-545618fc", "nightly")):
             with self.subTest(tag):
-                page = self.page(tag, "longshot", self.LONGSHOT)
+                page = self.page(tag, "hookshot", self.HOOKSHOT)
                 head, notes = page.split("\n---\n", 1)
-                link = "https://longshot.magicbean.dev/download/launcher/" + channel
+                link = "https://hookshot.magicbean.dev/download/launcher/" + channel
                 self.assertEqual(head.strip().split("\n\n")[:5], [
-                    "# 🎮 To play, get the Longshot Launcher",
+                    "# 🎮 To play, get the Hookshot Launcher",
                     "### [🪟 &nbsp;Download the launcher for Windows](%s/windows)" % link,
                     "### [🐧 &nbsp;Download the launcher for Linux (AppImage)](%s/linux)" % link,
                     "Windows without installing: [portable zip](%s/windows-portable) · [the launcher's newest %s release](%s)"
@@ -405,40 +405,40 @@ class Publish(unittest.TestCase):
     def test_a_draft_then_the_files_then_published(self):
         notes = self.dir / "notes.md"
         notes.write_text("## v3.0.0-rc.1\n")
-        a, b = self.dir / "Longshot-v3.0.0-rc.1-x86_64.AppImage", self.dir / "SHA256SUMS"
+        a, b = self.dir / "Hookshot-v3.0.0-rc.1-x86_64.AppImage", self.dir / "SHA256SUMS"
         a.write_bytes(b"\x7fELF builder")
         b.write_bytes(b"sums\n")
-        run("--product", "longshot", "publish", "v3.0.0-rc.1", "--target", "abc", "--notes", notes, a, b)
+        run("--product", "hookshot", "publish", "v3.0.0-rc.1", "--target", "abc", "--notes", notes, a, b)
         rel = FakeForgejo.releases[0]
-        self.assertEqual((rel["tag_name"], rel["draft"], rel["prerelease"], rel["name"]), ("v3.0.0-rc.1", False, True, "Longshot v3.0.0-rc.1"))
+        self.assertEqual((rel["tag_name"], rel["draft"], rel["prerelease"], rel["name"]), ("v3.0.0-rc.1", False, True, "Hookshot v3.0.0-rc.1"))
         self.assertEqual([(n, p) for _, n, p in FakeForgejo.uploads], [(a.name, b"\x7fELF builder"), ("SHA256SUMS", b"sums\n")])
         with self.assertRaises(SystemExit):   # (a published version's files never change)
-            run("--product", "longshot", "publish", "v3.0.0-rc.1", "--target", "abc", "--notes", notes, a)
+            run("--product", "hookshot", "publish", "v3.0.0-rc.1", "--target", "abc", "--notes", notes, a)
         bad = self.dir / "image.bin"
         bad.write_bytes(b"x")
         with self.assertRaises(SystemExit):
-            run("--product", "longshot", "publish", "v3.0.1-rc.1", "--target", "abc", "--notes", notes, bad)
+            run("--product", "hookshot", "publish", "v3.0.1-rc.1", "--target", "abc", "--notes", notes, bad)
 
     def test_the_page_on_the_release(self):
-        # (publish puts the notes under the page's header: Longshot's says to download the launcher of its channel)
+        # (publish puts the notes under the page's header: Hookshot's says to download the launcher of its channel)
         notes = self.dir / "notes.md"
         notes.write_text("### Fixes\n\n- a fix\n")
-        f = self.dir / "LongshotBuilder-nightly-34-545618fc-windows-x64.zip"
+        f = self.dir / "HookshotBuilder-nightly-34-545618fc-windows-x64.zip"
         f.write_bytes(b"PK zip")
-        run("--product", "longshot", "publish", "nightly-34-545618fc", "--target", "abc", "--notes", notes, f)
+        run("--product", "hookshot", "publish", "nightly-34-545618fc", "--target", "abc", "--notes", notes, f)
         body = FakeForgejo.releases[0]["body"]
-        self.assertTrue(body.startswith("# 🎮 To play, get the Longshot Launcher\n"))
-        self.assertIn("https://longshot.magicbean.dev/download/launcher/nightly/windows", body)
+        self.assertTrue(body.startswith("# 🎮 To play, get the Hookshot Launcher\n"))
+        self.assertIn("https://hookshot.magicbean.dev/download/launcher/nightly/windows", body)
         self.assertIn("### Fixes\n\n- a fix\n", body)
         # (the launcher's: its own files, on its repository)
         FakeForgejo.releases, FakeForgejo.uploads = [], []
-        f = self.dir / "LongshotLauncher-v1.0.0-rc.1-windows-x64-setup.exe"
+        f = self.dir / "HookshotLauncher-v1.0.0-rc.1-windows-x64-setup.exe"
         f.write_bytes(b"MZ setup")
         run("--product", "launcher", "publish", "v1.0.0-rc.1", "--target", "abc", "--notes", notes, f)
         body = FakeForgejo.releases[0]["body"]
-        self.assertTrue(body.startswith("# ⬇️ Download Longshot Launcher\n"))
+        self.assertTrue(body.startswith("# ⬇️ Download Hookshot Launcher\n"))
         self.assertIn("### [🪟 &nbsp;Download for Windows](https://git-cdn.magicbean.dev/MagicBeanDev/Test/releases/download/"
-                      "v1.0.0-rc.1/LongshotLauncher-v1.0.0-rc.1-windows-x64-setup.exe)", body)
+                      "v1.0.0-rc.1/HookshotLauncher-v1.0.0-rc.1-windows-x64-setup.exe)", body)
         self.assertIn(release.CHANNEL_SAYS["rc"], body)
 
     def test_a_draft_left_by_a_failed_run_is_reused(self):
@@ -448,7 +448,7 @@ class Publish(unittest.TestCase):
         notes.write_text("notes\n")
         f = self.dir / "SHA256SUMS"
         f.write_text("x\n")
-        run("--product", "longshot", "publish", "v3.0.0", "--target", "abc", "--notes", notes, f)
+        run("--product", "hookshot", "publish", "v3.0.0", "--target", "abc", "--notes", notes, f)
         self.assertEqual(len(FakeForgejo.releases), 1)
         self.assertIn("/api/v1/repos/MagicBeanDev/Test/releases/1/assets/9", FakeForgejo.deleted)
         self.assertEqual((FakeForgejo.releases[0]["draft"], FakeForgejo.releases[0]["prerelease"]), (False, False))
@@ -464,7 +464,7 @@ class Publish(unittest.TestCase):
         self.releases_of(*[(nightly(n), False, True) for n in (3, 12, 7, 100, 50, 9, 1)],
                          ("tools", False, True), ("v3.0.0", False, False), ("v3.1.0-rc.1", False, True), ("v2.9.0", False, False),
                          (nightly(4), True, True), (nightly(101), True, True))   # (drafts a failed run left; 101: still to come)
-        run("--product", "longshot", "prune", "--keep", "5")
+        run("--product", "hookshot", "prune", "--keep", "5")
         left = sorted(r["tag_name"] for r in FakeForgejo.releases)
         self.assertEqual(left, sorted([nightly(n) for n in (101, 100, 50, 12, 9, 7)] + ["tools", "v3.0.0", "v3.1.0-rc.1", "v2.9.0"]))
         self.assertIn("/api/v1/repos/MagicBeanDev/Test/tags/nightly-1-00000001", FakeForgejo.deleted)
@@ -498,10 +498,10 @@ class Publish(unittest.TestCase):
                 lambda *a, root=None, check=True, _g=release.git: _g(*a, root=str(repo), check=check)):
             err = io.StringIO()
             with contextlib.redirect_stderr(err):
-                self.assertEqual(run("--product", "longshot", "check-tag", "v3.0.0-rc.1", "--main", "main")[0], 1)
+                self.assertEqual(run("--product", "hookshot", "check-tag", "v3.0.0-rc.1", "--main", "main")[0], 1)
             self.assertIn("not above every release there is: v3.0.0", err.getvalue())
             FakeForgejo.releases[0]["draft"] = True   # (back to a draft: no longer in the way)
-            self.assertEqual(run("--product", "longshot", "check-tag", "v3.0.0-rc.1", "--main", "main")[0], 0)
+            self.assertEqual(run("--product", "hookshot", "check-tag", "v3.0.0-rc.1", "--main", "main")[0], 0)
 
     def test_publish_refuses_a_published_tag_on_a_later_page(self):
         self.releases_of(("v3.0.0", False, False), *[("nightly-%d-%08x" % (n, n), False, True) for n in range(1, 80)])
@@ -510,7 +510,7 @@ class Publish(unittest.TestCase):
         f = self.dir / "SHA256SUMS"
         f.write_text("x\n")
         with self.assertRaises(SystemExit) as e:
-            run("--product", "longshot", "publish", "v3.0.0", "--target", "abc", "--notes", notes, f)
+            run("--product", "hookshot", "publish", "v3.0.0", "--target", "abc", "--notes", notes, f)
         self.assertIn("already published", str(e.exception))
         self.assertEqual(FakeForgejo.uploads, [])
 
@@ -550,7 +550,7 @@ class ReleasedAs(unittest.TestCase):
         return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "tag.gpgsign=false",
                                *args], cwd=self.repo, check=True, capture_output=True, text=True).stdout.strip()
 
-    def release(self, tag, commit, files=("Longshot-%s-x86_64.AppImage", "LongshotBuilder-%s-windows-x64.zip", "tools.lock"),
+    def release(self, tag, commit, files=("Hookshot-%s-x86_64.AppImage", "HookshotBuilder-%s-windows-x64.zip", "tools.lock"),
                 key="keys", draft=False, sums_of=None, sig=None):
         """A release of commit as CI publishes it: its files, SHA256SUMS over them (or over sums_of), signed with key"""
         self.git("tag", tag, commit)
@@ -569,7 +569,7 @@ class ReleasedAs(unittest.TestCase):
         FakeForgejo.releases.append({"id": rid, "tag_name": tag, "draft": draft, "prerelease": True, "assets": assets})
 
     def released_as(self, commit, but=None):
-        return release.released_as(commit, "longshot", root=str(self.repo), but=but)
+        return release.released_as(commit, "hookshot", root=str(self.repo), but=but)
 
     def nightly(self, n, commit):
         return "nightly-%d-%s" % (n, commit[:8])
@@ -600,8 +600,8 @@ class ReleasedAs(unittest.TestCase):
             "corrupt": dict(sig=b"MEUCIQ=="),
             "not base64": dict(sig=b"\x00not base64"),
             "a file more": dict(sums_of=["tools.lock"]),
-            "a file less": dict(sums_of=["tools.lock", "LongshotBuilder.exe", "Longshot-x-x86_64.AppImage",
-                                         "LongshotBuilder-x-windows-x64.zip"]),
+            "a file less": dict(sums_of=["tools.lock", "HookshotBuilder.exe", "Hookshot-x-x86_64.AppImage",
+                                         "HookshotBuilder-x-windows-x64.zip"]),
         }
         for n, (what, kwargs) in enumerate(cases.items(), 1):
             with self.subTest(what):
@@ -637,10 +637,10 @@ class ReleasedAs(unittest.TestCase):
         with mock.patch.object(release, "ROOT", str(self.repo)), mock.patch.object(release, "git",
                 lambda *a, root=None, check=True, _g=release.git: _g(*a, root=str(self.repo), check=check)), \
                 mock.patch.object(release, "trusted_keys", lambda root=None, _t=release.trusted_keys: _t(str(self.repo))):
-            self.assertEqual(run("--product", "longshot", "released-as", self.b, "--not", "v3.0.0-rc.1"), (0, self.nightly(1, self.b) + "\n"))
-            self.assertEqual(run("--product", "longshot", "released-as", self.a), (0, "\n"))
+            self.assertEqual(run("--product", "hookshot", "released-as", self.b, "--not", "v3.0.0-rc.1"), (0, self.nightly(1, self.b) + "\n"))
+            self.assertEqual(run("--product", "hookshot", "released-as", self.a), (0, "\n"))
             with self.assertRaises(SystemExit):
-                run("--product", "longshot", "released-as", self.b[:8])
+                run("--product", "hookshot", "released-as", self.b[:8])
 
 
 class TokenStaysHome(unittest.TestCase):

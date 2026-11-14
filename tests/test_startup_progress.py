@@ -36,7 +36,7 @@ int main() {
     CHECK(version_text("v2.0.5") == "v2.0.5");
     CHECK(version_text("v2.0.5-2-g619c897-dirty (source 2c44105b)") == "v2.0.5 dev");
     CHECK(version_text("movie-sync (source 1a2b3c4d)") == "movie-sync");
-    // (Longshot's names: a release candidate as its tag, a nightly as the launcher names it, a build between tags as "dev")
+    // (Hookshot's names: a release candidate as its tag, a nightly as the launcher names it, a build between tags as "dev")
     CHECK(version_text("v3.0.0-rc.1 (source 1a2b3c4d)") == "v3.0.0-rc.1");
     CHECK(version_text("v3.0.0-rc.12") == "v3.0.0-rc.12");
     CHECK(version_text("v3.0.0-rc.1-5-gabc1234-dirty (source 1a2b3c4d)") == "v3.0.0-rc.1 dev");

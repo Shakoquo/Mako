@@ -207,7 +207,7 @@ def main():
         raise SystemExit("C++ compiler not found: " + args.cxx)
     test_sources()
     recorder = (VK / "vk_recorder.h").read_text(encoding="utf-8")
-    with tempfile.TemporaryDirectory(prefix="longshot-recorder-own-") as folder:
+    with tempfile.TemporaryDirectory(prefix="hookshot-recorder-own-") as folder:
         out = Path(folder)
         bad = check(build(cxx, args.headers, out, recorder, "real"))
         if bad:

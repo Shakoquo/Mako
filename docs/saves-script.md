@@ -1,10 +1,10 @@
 # Saves: the files, the script and the emulators
 
-The details behind [moving your saves](saves.md): the save files, where Longshot, Hookshot and every emulator keep them,
+The details behind [moving your saves](saves.md): the save files, where Hookshot, Hookshot and every emulator keep them,
 `scripts/oot_saves.py` (the command line that does what the launcher's Saves page does, and more), copying by hand,
 and what was tested. Most players only need the launcher: see [moving your saves](saves.md).
 
-Longshot, Hookshot and the supported emulators use the same save-file layout, so a transfer copies the files without
+Hookshot, Hookshot and the supported emulators use the same save-file layout, so a transfer copies the files without
 converting them. You can preview any script transfer with `--dry-run` before it changes anything.
 
 ## The files
@@ -21,37 +21,37 @@ slot_00/ ... slot_NN/ (one per save slot)
 
 Only the folder they are in differs.
 
-## Where Longshot keeps them
+## Where Hookshot keeps them
 
 | | Where |
 |---|---|
-| Linux and Steam Deck | `~/.local/share/longshot/save/<user id>/` (`$XDG_DATA_HOME/longshot` when it is set). Every build uses it, so a rebuilt game folder keeps its saves |
-| Windows | `<game folder>\user\save\<user id>\`. The builder's game folder is `%USERPROFILE%\Games\Longshot` unless you chose another; each game folder has its own saves |
+| Linux and Steam Deck | `~/.local/share/hookshot/save/<user id>/` (`$XDG_DATA_HOME/hookshot` when it is set). Every build uses it, so a rebuilt game folder keeps its saves |
+| Windows | `<game folder>\user\save\<user id>\`. The builder's game folder is `%USERPROFILE%\Games\Hookshot` unless you chose another; each game folder has its own saves |
 
-`<user id>` is `5a3c9e1f0b7d24680000000000000001`, the same in every Longshot and Hookshot build. Started with
-`--user <folder>` ([command line arguments](../README.md#running-the-game-from-the-command-line)), Longshot keeps its
+`<user id>` is `5a3c9e1f0b7d24680000000000000001`, the same in every Hookshot and Hookshot build. Started with
+`--user <folder>` ([command line arguments](../README.md#running-the-game-from-the-command-line)), Hookshot keeps its
 saves in `<folder>/save/<user id>/` instead.
 
 ## The script
 
-`scripts/oot_saves.py` needs Python 3 and nothing else. Run it from the Longshot folder (or a clone):
+`scripts/oot_saves.py` needs Python 3 and nothing else. Run it from the Hookshot folder (or a clone):
 
 ```sh
 python -I scripts/oot_saves.py list              # every save it finds, its slots and when each was saved
-python -I scripts/oot_saves.py import hookshot   # Hookshot -> Longshot
-python -I scripts/oot_saves.py import lichii     # Lichii -> Longshot
-python -I scripts/oot_saves.py export lichii     # Longshot -> Lichii
-python -I scripts/oot_saves.py import --from ~/Downloads/my-save   # any folder holding a save -> Longshot
-python -I scripts/oot_saves.py export --to ~/Lichii/user           # Longshot -> a portable emulator
+python -I scripts/oot_saves.py import hookshot   # Hookshot -> Hookshot
+python -I scripts/oot_saves.py import lichii     # Lichii -> Hookshot
+python -I scripts/oot_saves.py export lichii     # Hookshot -> Lichii
+python -I scripts/oot_saves.py import --from ~/Downloads/my-save   # any folder holding a save -> Hookshot
+python -I scripts/oot_saves.py export --to ~/Lichii/user           # Hookshot -> a portable emulator
 ```
 
-`import` copies into Longshot, `export` copies out of it. The names are `hookshot`, `lichii`, `frizti` (or `fritchii`),
+`import` copies into Hookshot, `export` copies out of it. The names are `hookshot`, `lichii`, `frizti` (or `fritchii`),
 `orchid`, `pokedinner`, `eden`, `eglantine` and `nx2navi`.
 
-On Windows, a game folder other than `%USERPROFILE%\Games\Longshot` has to be named:
+On Windows, a game folder other than `%USERPROFILE%\Games\Hookshot` has to be named:
 
 ```powershell
-python -I scripts\oot_saves.py import lichii --longshot "D:\Games\Longshot"
+python -I scripts\oot_saves.py import lichii --hookshot "D:\Games\Hookshot"
 ```
 
 | Option | What it does |
@@ -60,31 +60,31 @@ python -I scripts\oot_saves.py import lichii --longshot "D:\Games\Longshot"
 | `--keep-settings` | Leaves the target's `option.sav` alone, so each program keeps its own settings |
 | `--profile <id>` | The emulator's profile to use. Needed when more than one profile has saves: the script lists them and stops rather than pick one |
 | `--from <folder>`, `--to <folder>` | The other side: the save folder itself, or a folder above it to search (a data folder, a portable `user` folder, a game folder). With a name, it replaces where that program is looked for; without one, any folder works |
-| `--longshot <folder>` | Longshot's data folder (Windows: the game folder), or its `save/<user id>` folder |
+| `--hookshot <folder>` | Hookshot's data folder (Windows: the game folder), or its `save/<user id>` folder |
 | `--hookshot <folder>` | The same for Hookshot, with `import hookshot` or `export hookshot` |
 | `--backup-dir <folder>` | Where the backup goes, outside the target save folder |
 | `--force` | Copies even if a game seems to be running, or NX2navi has a save waiting |
 
 Every copy:
 
-- **refuses to start while Longshot, Hookshot or one of the emulators runs**, since a running game can write its save
+- **refuses to start while Hookshot, Hookshot or one of the emulators runs**, since a running game can write its save
   again on exit and undo the copy;
 - **backs up the side it overwrites first**, to `oot-save-backups/<import or export>-<name>-<date>-<time>/`: in
-  `~/.local/share` on Linux, in `%LOCALAPPDATA%\Longshot` on Windows. To undo a copy, put the backup's contents back;
+  `~/.local/share` on Linux, in `%LOCALAPPDATA%\Hookshot` on Windows. To undo a copy, put the backup's contents back;
 - replaces the target's `slot_*` folders, `account.sav` and `option.sav`, so a slot that only existed on that side does
   not stay mixed in with the new save;
 - copies the new save into a folder inside the target first and swaps it in only when that copy worked, so a copy that
   fails part way (a full disk) leaves the target's save as it was;
 - refuses a save that holds a link (it would copy whatever the link points to).
 
-When Longshot (or, for `export hookshot`, Hookshot) has no save yet, the copy makes its save folder: on Linux in the data
+When Hookshot (or, for `export hookshot`, Hookshot) has no save yet, the copy makes its save folder: on Linux in the data
 folder, on Windows in the game folder, which has to exist. An emulator has to have been started and saved in once, so
 that its own folder exists.
 
 ## From Hookshot
 
-[Hookshot](https://github.com/NotRexed/Hookshot) is the project Longshot was forked from. Its game writes the same files
-in the same layout, with the same user id, so a Hookshot save carries on in Longshot as it is: the files are copied byte
+[Hookshot](https://github.com/NotRexed/Hookshot) is the project Hookshot was forked from. Its game writes the same files
+in the same layout, with the same user id, so a Hookshot save carries on in Hookshot as it is: the files are copied byte
 for byte.
 
 ```sh
@@ -104,7 +104,7 @@ Hookshot's folder is only read. Before anything is copied, the save is checked a
 `account.sav`, `option.sav` and `slot_NN` folders holding `progress.sav` and `caption.sav`, no link, no empty file and
 none over 4 MB, at least one slot and a `progress.sav` in each. If it fails, the script says why and copies nothing.
 
-`export hookshot` takes your Longshot save back to Hookshot the same way.
+`export hookshot` takes your Hookshot save back to Hookshot the same way.
 
 ## From and to the emulators
 
@@ -152,7 +152,7 @@ its folder.
 | What you see | What to do |
 |---|---|
 | `close ... first` | Quit the game or emulator it names (from its menu, so it saves), then copy again. `--force` only if it is wrongly seen as running |
-| `no Longshot save found` (Windows) | Your game folder is not `%USERPROFILE%\Games\Longshot`: pass it with `--longshot <game folder>` |
+| `no Hookshot save found` (Windows) | Your game folder is not `%USERPROFILE%\Games\Hookshot`: pass it with `--hookshot <game folder>` |
 | `no <program> save found` | Start the game in that program once and save, or pass its folder with `--from`/`--to` (a portable install, another drive) |
 | `... saves in 2 profiles, so pick one` | Pass `--profile <id>` with the profile you play on, from the list it prints |
 | `NX2navi still has a save waiting` | Start NX2navi, load and quit from the game, then copy |
@@ -170,6 +170,6 @@ Backups pile up, one per copy: delete old ones from `oot-save-backups` when you 
 - A Lichii save copied to Hookshot arrives identical, but has not been played through on the Hookshot side.
 - The script's discovery for every program above, its copies, backups and checks are covered by
   `tests/test_oot_saves.py`, on temporary folders with made-up saves.
-- **Not tested:** Windows, every emulator but Lichii, and a Hookshot save played on in Longshot. That one rests on the
-  code: Longshot's save code is Hookshot's, unchanged by the rename (the same user id and folder layout, and the files
+- **Not tested:** Windows, every emulator but Lichii, and a Hookshot save played on in Hookshot. That one rests on the
+  code: Hookshot's save code is Hookshot's, unchanged by the rename (the same user id and folder layout, and the files
   are the game's own). The emulators' folders come from their source or, for NX2navi, its documentation.

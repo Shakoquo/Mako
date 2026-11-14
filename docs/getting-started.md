@@ -1,6 +1,6 @@
 # Getting started
 
-Longshot is built on your PC, from your own copy of the game, by the Longshot Launcher. It takes three steps.
+Hookshot is built on your PC, from your own copy of the game, by the Hookshot Launcher. It takes three steps.
 **We do not host, store, or distribute game files, ROMs, game dumps, or decryption keys.**
 
 ## 1. Check your PC
@@ -10,13 +10,13 @@ memory (8 GB and mesh shaders recommended), 16 GB of memory and about 60 GB free
 
 ## 2. Download the launcher
 
-- [Download for Windows](https://longshot.magicbean.dev/download/launcher/windows)
-- [Download for Linux](https://longshot.magicbean.dev/download/launcher/linux)
-- [Windows, portable zip](https://longshot.magicbean.dev/download/launcher/windows-portable)
+- [Download for Windows](https://hookshot.magicbean.dev/download/launcher/windows)
+- [Download for Linux](https://hookshot.magicbean.dev/download/launcher/linux)
+- [Windows, portable zip](https://hookshot.magicbean.dev/download/launcher/windows-portable)
 
 Then follow [the Windows steps](../README.md#on-windows) or [the Linux steps](../README.md#on-linux) (on Linux and
 SteamOS, the AppImage has to be made runnable first). Every channel, and the file for your system, is on the
-[download page](https://longshot.magicbean.dev/download).
+[download page](https://hookshot.magicbean.dev/download).
 
 ## 3. Build and play
 

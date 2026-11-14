@@ -1,6 +1,6 @@
 """Why the Linux renderer did not load is in the log (host/posix/win32_posix.c hos_load_error, host/rx_backend.c load_vulkan).
 
-dlopen fails on longshot_vk.so for a missing file, a glibc older than it needs, a wrong ELF class or a static TLS block
+dlopen fails on hookshot_vk.so for a missing file, a glibc older than it needs, a wrong ELF class or a static TLS block
 too small, before mkwvk_init's version check, and nothing is drawn. The POSIX LoadLibraryA kept only
 ERROR_FILE_NOT_FOUND, so the log said "(2)" for all of them alike. It now keeps dlerror()'s text, which names the file
 or what it lacks, and load_vulkan prints it, without dlerror()'s leading "<file>: " so the path is in the line once. The
@@ -70,7 +70,7 @@ def check_posix(cc):
         exe = tmp / "driver"
         subprocess.run([cc, "-std=gnu11", "-D_GNU_SOURCE", "-w", "-I", str(ROOT / "host" / "posix"), str(tmp / "driver.c"),
                         str(ROOT / "host" / "posix" / "win32_posix.c"), "-o", str(exe), "-lpthread", "-ldl"], check=True)
-        # a library that needs a symbol nothing loaded has, as longshot_vk.so from another build would
+        # a library that needs a symbol nothing loaded has, as hookshot_vk.so from another build would
         (tmp / "needs.c").write_text("extern int mkwvk_from_another_build(void);\nint use(void) { return mkwvk_from_another_build(); }\n",
                                      encoding="utf-8")
         subprocess.run([cc, "-shared", "-fPIC", str(tmp / "needs.c"), "-o", str(tmp / "needs.so")], check=True)

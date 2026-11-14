@@ -5,12 +5,12 @@ nx2/make_game.py (--cli), and puts what it prints in the environment.
     linux_tools.py env [--install]
 
 Each tool is looked for, in order:
-  1. in the builder itself, at its tools.lock dest (<AppDir>/usr/lib/longshot/emsdk, ...): the Longshot Launcher unpacks
+  1. in the builder itself, at its tools.lock dest (<AppDir>/usr/lib/hookshot/emsdk, ...): the Hookshot Launcher unpacks
      the AppImage into <launcher home>/toolchains/<version>/ and each tool beside it there (Core/Toolchains.cs), as it does
      on Windows; a developer's AppDir too;
   2. in the launcher's own copy of this version (<launcher home>/toolchains/<version>/, its toolchain.json naming the tool's
      SHA-256), when the AppImage is started by itself on a PC where the launcher installed the same version;
-  3. in the builder's toolchains ($XDG_DATA_HOME/longshot/builder/toolchains/<version>/, the same layout), where --install
+  3. in the builder's toolchains ($XDG_DATA_HOME/hookshot/builder/toolchains/<version>/, the same layout), where --install
      puts what is missing: each archive downloaded from tools.lock's URLs, checked by its size and SHA-256
      (scripts/tools.py), and unpacked at its dest, its stamp in .tools/<name>. A tool another version there already has
      (the same SHA-256) is linked from it, not downloaded again; once a version's tools are there, nothing is downloaded.
@@ -27,11 +27,11 @@ import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TOOLS_ROOT = os.environ.get("LONGSHOT_TOOLS") or os.path.dirname(os.path.dirname(HERE))   # (usr/share/longshot, or a checkout)
+TOOLS_ROOT = os.environ.get("HOOKSHOT_TOOLS") or os.path.dirname(os.path.dirname(HERE))   # (usr/share/hookshot, or a checkout)
 SYSTEM = "linux-x64"
 # (what make_game.py and nx2/build.py read for each tool, and the file in it when it is one file)
-ENV = {"emsdk": ("EMSDK", ""), "sysroot": ("LONGSHOT_SYSROOT", ""), "ffmpeg": ("LONGSHOT_FFMPEG", ""),
-       "sdl2": ("LONGSHOT_SDL2", "libSDL2-2.0.so.0"), "cpm": ("RX_CPM", "")}
+ENV = {"emsdk": ("EMSDK", ""), "sysroot": ("HOOKSHOT_SYSROOT", ""), "ffmpeg": ("HOOKSHOT_FFMPEG", ""),
+       "sdl2": ("HOOKSHOT_SDL2", "libSDL2-2.0.so.0"), "cpm": ("RX_CPM", "")}
 TAG = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._+-]{0,127}$")
 
 
@@ -48,21 +48,21 @@ tools = _tools_py()
 
 
 def data_root(environ=os.environ):
-    """The builder's own data: $LONGSHOT_BUILDER_HOME or $XDG_DATA_HOME/longshot/builder"""
-    base = environ.get("LONGSHOT_BUILDER_HOME") or environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
-    return os.path.join(base, "longshot", "builder")
+    """The builder's own data: $HOOKSHOT_BUILDER_HOME or $XDG_DATA_HOME/hookshot/builder"""
+    base = environ.get("HOOKSHOT_BUILDER_HOME") or environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    return os.path.join(base, "hookshot", "builder")
 
 
 def launcher_toolchains(environ=os.environ):
-    """The launcher's toolchains folder (its LauncherHome: $LONGSHOT_LAUNCHER_HOME, else $XDG_DATA_HOME/longshot/launcher)"""
-    home = environ.get("LONGSHOT_LAUNCHER_HOME")
+    """The launcher's toolchains folder (its LauncherHome: $HOOKSHOT_LAUNCHER_HOME, else $XDG_DATA_HOME/hookshot/launcher)"""
+    home = environ.get("HOOKSHOT_LAUNCHER_HOME")
     if not home:
-        home = os.path.join(environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "longshot", "launcher")
+        home = os.path.join(environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "hookshot", "launcher")
     return os.path.join(home, "toolchains")
 
 
 def app_root(tools_root=TOOLS_ROOT):
-    """The builder's root, where AppRun is: <root>/usr/share/longshot is tools_root (None in a checkout)"""
+    """The builder's root, where AppRun is: <root>/usr/share/hookshot is tools_root (None in a checkout)"""
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(tools_root))))
     return root if os.path.isfile(os.path.join(root, "AppRun")) else None
 

@@ -16,7 +16,7 @@ PRELUDE = r'''
 #include <cstring>
 #include <cstdio>
 #include <vector>
-#include "longshot_env.h"
+#include "hookshot_env.h"
 // A rejected causal control must exit, not wait for an interactive CRT dialog.
 #undef assert
 #define assert(condition) do { if (!(condition)) { \

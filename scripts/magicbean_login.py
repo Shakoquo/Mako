@@ -6,8 +6,8 @@ listener on 127.0.0.1 with a Forgejo token. The team chat's session then comes f
 the team's sign-in service (matrix.magicbean.dev/_magicbean/matrix-login) asks Forgejo whose token it is and answers
 with a one-minute login for the Matrix server.
 
-Saved in the config folder (Linux: $XDG_CONFIG_HOME/longshot, default ~/.config/longshot; Windows: %APPDATA%\\Longshot;
-LONGSHOT_TEAM_CHAT_DIR overrides it), readable by you only: forge.json (the Forgejo token, renewed by itself when it
+Saved in the config folder (Linux: $XDG_CONFIG_HOME/hookshot, default ~/.config/hookshot; Windows: %APPDATA%\\Hookshot;
+HOOKSHOT_TEAM_CHAT_DIR overrides it), readable by you only: forge.json (the Forgejo token, renewed by itself when it
 runs out) and team_chat.json (the Matrix session; made again from the Forgejo token when it is missing).
 
     python -I scripts/magicbean_login.py login [--no-browser]     (the same as team_chat.py login)
@@ -34,7 +34,7 @@ SERVER = "magicbean.dev"                       # the Matrix server name
 FORGE_HOST = "git.magicbean.dev"
 FORGE = "https://" + FORGE_HOST
 GIT_CLIENT_ID = "a4792ccc-144e-407e-86c9-5e7d8d9c3269"   # Forgejo's default public application "git-credential-oauth"
-USER_AGENT = "longshot-login/1"                # (Cloudflare answers 403 to urllib's default agent)
+USER_AGENT = "hookshot-login/1"                # (Cloudflare answers 403 to urllib's default agent)
 LOGIN_TIMEOUT = 300
 
 
@@ -43,12 +43,12 @@ class LoginError(Exception):
 
 
 def config_dir():
-    if os.environ.get("LONGSHOT_TEAM_CHAT_DIR"):
-        return os.environ["LONGSHOT_TEAM_CHAT_DIR"]
+    if os.environ.get("HOOKSHOT_TEAM_CHAT_DIR"):
+        return os.environ["HOOKSHOT_TEAM_CHAT_DIR"]
     if os.name == "nt":
-        return os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "Longshot")
+        return os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "Hookshot")
     base = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
-    return os.path.join(base, "longshot")
+    return os.path.join(base, "hookshot")
 
 
 def write_private(path, value):
@@ -207,7 +207,7 @@ def listen(server, wanted, forge_url, expect_state, timeout, on_matrix=None):
                 self.send_response(200 if ok else 400)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(("<!doctype html><title>Longshot</title><p>%s</p>" % text).encode("utf-8"))
+                self.wfile.write(("<!doctype html><title>Hookshot</title><p>%s</p>" % text).encode("utf-8"))
             except OSError:
                 pass   # (the browser went away first, e.g. WinError 10053; what came in above is what matters)
 

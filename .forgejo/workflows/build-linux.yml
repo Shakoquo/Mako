@@ -1,10 +1,10 @@
-# The Linux Longshot Builder (docs/releases.md): Longshot-<version>-x86_64.AppImage, the builder with its Python, Longshot's
+# The Linux Hookshot Builder (docs/releases.md): Hookshot-<version>-x86_64.AppImage, the builder with its Python, Hookshot's
 # sources and the Vulkan back end built (scripts/linux/deps.sh's pinned downloads, scripts/linux/appimage.sh), and
 # recomplauncher.json inside. Its build tools (the compiler, the sysroot, FFmpeg, SDL2, the Vulkan headers) are not in it:
 # they are tools.lock's linux-x64 lines, installed here to build the back end and check the image, and on the player's PC by
 # the launcher or the builder's first start. No game data is involved. Built in Ubuntu 22.04, the oldest system it is for
 # (glibc 2.35). The AppImage is a workflow artifact; called by release.yml with the version's name, it is the release's.
-# It carries the version (its name, usr/share/longshot/VERSION, and longshot_vk.so's menu and bug report: nx2/version.py), so
+# It carries the version (its name, usr/share/hookshot/VERSION, and hookshot_vk.so's menu and bug report: nx2/version.py), so
 # a tag always builds it again; a tag whose commit CI released already (release.yml's `checked`) skips only the build check
 # that ships nothing and passed in that run (the back end with AMD FSR 4).
 name: Linux AppImage
@@ -129,7 +129,7 @@ jobs:
       - name: Dependencies (Python, the AppImage packer)
         run: scripts/linux/deps.sh
 
-      # (tools.lock's linux-x64 tools, from Longshot's packages, each checked by its SHA-256: what the player's builder
+      # (tools.lock's linux-x64 tools, from Hookshot's packages, each checked by its SHA-256: what the player's builder
       # downloads. Kept between runs by tools.lock's own hash; a release fetches them again)
       - if: env.RELEASE_TAG == ''
         uses: https://github.com/actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -170,13 +170,13 @@ jobs:
           if [ -f work/hot_order.txt ]; then echo "work/ is in the repository"; exit 0; fi
           grep -q '^tool profile ' tools.lock || { echo "tools.lock has no profile yet: built without it"; exit 0; }
           python3 -I scripts/tools.py install "$RUNNER_TEMP/profile" --only profile --cache "$RUNNER_TEMP/tools-cache"
-          mkdir -p work && cp -r "$RUNNER_TEMP"/profile/LongshotBuilder/tools/work/. work/
+          mkdir -p work && cp -r "$RUNNER_TEMP"/profile/HookshotBuilder/tools/work/. work/
           ls -la work
 
       # (the AppImage, named by the release's version: a release's tag or the nightly's name)
       - name: AppImage
         env:
-          LONGSHOT_VERSION: ${{ env.RELEASE_TAG }}
+          HOOKSHOT_VERSION: ${{ env.RELEASE_TAG }}
         run: scripts/linux/appimage.sh
 
       # (the object cache down to the objects this build used, as nx2/make_game.py prune_object_cache does: each object in
@@ -207,19 +207,19 @@ jobs:
       # its own: scripts/linux/check_player_build.sh) (gpu/vk/vk_fsr4.cpp: dlopen, the older backend
       # description, the unit exposure; the descriptor buffers in vk_main.cpp): built once more in a copy of the back end's
       # work folder, where only vk_fsr4.cpp compiles again. The AppImage above is not changed)
-      - name: longshot_vk.so with AMD FSR 4 (build check)
+      - name: hookshot_vk.so with AMD FSR 4 (build check)
         if: env.RELEASE_CHECKED == ''
         shell: bash   # (this container's default is sh, which has no PIPESTATUS)
         run: |
           cp -r build-linux/vk-work "$RUNNER_TEMP/vk-fsr"
-          rm -f "$RUNNER_TEMP/vk-fsr/sa/build/longshot_vk.so"   # (the AppImage's own, without FSR: the test below is this build's)
+          rm -f "$RUNNER_TEMP/vk-fsr/sa/build/hookshot_vk.so"   # (the AppImage's own, without FSR: the test below is this build's)
           D="$PWD/build-linux/deps" T="$PWD/build-linux/tools"
-          OOT_WORK="$RUNNER_TEMP/vk-fsr" EMSDK="$T/usr/lib/longshot/emsdk" RX_CPM="$T/usr/share/longshot/cpm" RX_MARCH=x86-64-v3 \
-            RX_VK_ONLY=1 RX_RELEASE=1 LONGSHOT_FSR=1 "$D/python/bin/python3" -I nx2/build.py --standalone --jobs "$(nproc)" |
+          OOT_WORK="$RUNNER_TEMP/vk-fsr" EMSDK="$T/usr/lib/hookshot/emsdk" RX_CPM="$T/usr/share/hookshot/cpm" RX_MARCH=x86-64-v3 \
+            RX_VK_ONLY=1 RX_RELEASE=1 HOOKSHOT_FSR=1 "$D/python/bin/python3" -I nx2/build.py --standalone --jobs "$(nproc)" |
             tee "$RUNNER_TEMP/vk-fsr.log"
           test "${PIPESTATUS[0]}" -eq 0
           grep -q "with AMD FSR 4" "$RUNNER_TEMP/vk-fsr.log"
-          test -f "$RUNNER_TEMP/vk-fsr/sa/build/longshot_vk.so"
+          test -f "$RUNNER_TEMP/vk-fsr/sa/build/hookshot_vk.so"
 
       # (an artifact goes to Forgejo by its public address, ROOT_URL, behind Cloudflare, whatever address the runner has: a
       # request there can fail once, and the action does not send a block again (2026-11-13, the launcher's nightly: one
@@ -228,13 +228,13 @@ jobs:
         continue-on-error: true
         uses: https://data.forgejo.org/forgejo/upload-artifact@16871d9e8cfcf27ff31822cac382bbb5450f1e1e   # v4 (4.3.1 with the GHES check off; Forgejo's: GitHub's v4 and later refuse a server that is not github.com)
         with:
-          name: Longshot-linux-x86_64
+          name: Hookshot-linux-x86_64
           path: build-linux/*.AppImage
           if-no-files-found: error
       - if: steps.upload_1.outcome == 'failure'
         uses: https://data.forgejo.org/forgejo/upload-artifact@16871d9e8cfcf27ff31822cac382bbb5450f1e1e   # v4 (4.3.1 with the GHES check off; Forgejo's: GitHub's v4 and later refuse a server that is not github.com)
         with:
-          name: Longshot-linux-x86_64
+          name: Hookshot-linux-x86_64
           path: build-linux/*.AppImage
           if-no-files-found: error
 

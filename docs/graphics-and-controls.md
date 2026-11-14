@@ -1,6 +1,6 @@
 # Settings
 
-Everything you can change is in Longshot's in-game menu: graphics, sound, gameplay and controls. Pick a starting point
+Everything you can change is in Hookshot's in-game menu: graphics, sound, gameplay and controls. Pick a starting point
 below, then look up any single setting in the list at the bottom.
 
 ## Open the menu
@@ -14,7 +14,7 @@ below, then look up any single setting in the list at the bottom.
 <kbd>F1</kbd> always works. **Controls → Menu shortcut** can take <kbd>Esc</kbd> or <kbd>Insert</kbd> off the list, for
 example to leave <kbd>Insert</kbd> to another overlay.
 
-Your choices are saved as you go, in `longshot_options.ini` in the game folder. A setting marked **After a restart**
+Your choices are saved as you go, in `hookshot_options.ini` in the game folder. A setting marked **After a restart**
 applies the next time the game starts: when you close the menu it asks whether to restart. **Later** keeps the change
 for next time; **Restart now** starts the game again, and you lose any progress since your last save.
 
@@ -36,7 +36,7 @@ Output resolution starts at the game's own 2560x1440, or at your screen's size w
   still count frames and can misbehave. For smoother motion, use frame generation instead.
 - **Frame generation** adds frames between the game's own. Motion is smoother, but the game itself doesn't run any
   faster and input delay goes up a little. **Auto** matches your display's refresh rate. On an NVIDIA RTX 40 card or
-  newer, with DLSS, DLAA or FSR as the upscaler, NVIDIA DLSS Frame Generation makes the frames; otherwise Longshot's
+  newer, with DLSS, DLAA or FSR as the upscaler, NVIDIA DLSS Frame Generation makes the frames; otherwise Hookshot's
   built-in frame generation does. **NVIDIA Reflex** and **AMD Anti-Lag 2** cut the added delay; they only appear on
   cards that support them.
 - **DLSS and DLAA look softer** than the game's own upscaler: set **Sharpness** to around 80% with them.

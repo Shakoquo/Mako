@@ -19,7 +19,7 @@ with the request's ID and the action, so people can read it and type it by hand 
     🧪 T-7KQ2 claim: until 2026-11-12 16:40Z
     🧪 T-7KQ2 renew: until 2026-11-12 18:10Z
     🧪 T-7KQ2 release
-    🧪 T-7KQ2 done pass: https://git.magicbean.dev/MagicBeanDev/Longshot/pulls/12#issuecomment-123
+    🧪 T-7KQ2 done pass: https://git.magicbean.dev/MagicBeanDev/Hookshot/pulls/12#issuecomment-123
     🧪 T-7KQ2 cancel
 
 The room's messages are the only record: list and every check below replay them in order. A request stays open until
@@ -30,8 +30,8 @@ on the request's PR, and replaces that person's earlier result. release is the c
 A message that breaks these rules changes nothing. (The approval below is git.magicbean.dev's, so the script checks it
 before claiming; a claim typed by hand on a request that isn't approved shows nowhere on Discord.)
 
-Requests are for Longshot's pull requests on git.magicbean.dev. Only approved requests can be claimed: the PR's author
-may push to Longshot, or a maintainer put the "testing wanted" label on it. Anything else waits for a maintainer to add
+Requests are for Hookshot's pull requests on git.magicbean.dev. Only approved requests can be claimed: the PR's author
+may push to Hookshot, or a maintainer put the "testing wanted" label on it. Anything else waits for a maintainer to add
 the label (the card on Discord says so, and list shows it last); this keeps strangers' code off testers' PCs until
 someone has looked at it. The script asks git.magicbean.dev, with the team sign-in.
 
@@ -58,22 +58,22 @@ import magicbean_login  # noqa: E402  (same folder; python -I does not add it to
 import team_chat  # noqa: E402
 
 ROOM = "#test-requests:magicbean.dev"
-REPO = "https://git.magicbean.dev/MagicBeanDev/Longshot"
+REPO = "https://git.magicbean.dev/MagicBeanDev/Hookshot"
 MARK = "\N{TEST TUBE}"
 ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I
 DEFAULT_TTL = 90
 MAX_TTL = 480
-API = "https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Longshot"
+API = "https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Hookshot"
 LABEL = "testing wanted"
-WRITERS = ("owner", "admin", "write")  # may push to Longshot: their PRs need no label
+WRITERS = ("owner", "admin", "write")  # may push to Hookshot: their PRs need no label
 HISTORY_LIMIT = 50000  # messages read back; renews add one per tester every half hour
 EXIT_REFUSED = team_chat.EXIT_REFUSED
 
 LINE = re.compile(r"^%s\s*(T-[%s]{4})\s+(request|claim|renew|release|done|cancel)\b(?:\s+(pass|fail|mixed))?\s*:?\s*(.*)$"
                   % (MARK, ID_CHARS))
 UNTIL = re.compile(r"until\s+(\d{4}-\d\d-\d\d)[ T](\d\d:\d\d)Z", re.I)
-PR_URL = re.compile(r"https://git\.magicbean\.dev/MagicBeanDev/Longshot/pulls/(\d+)")
-COMMENT_URL = re.compile(r"^https://git\.magicbean\.dev/MagicBeanDev/Longshot/pulls/(\d+)#issuecomment-\d+$")
+PR_URL = re.compile(r"https://git\.magicbean\.dev/MagicBeanDev/Hookshot/pulls/(\d+)")
+COMMENT_URL = re.compile(r"^https://git\.magicbean\.dev/MagicBeanDev/Hookshot/pulls/(\d+)#issuecomment-\d+$")
 
 
 def parse(body):
@@ -172,7 +172,7 @@ def forge_get(path, token=None):
 
 
 def pr_info(number):
-    """The PR's state (open, draft, merged, closed), its labels and whether its author may push to Longshot, from
+    """The PR's state (open, draft, merged, closed), its labels and whether its author may push to Hookshot, from
     git.magicbean.dev (the author check needs the team sign-in; without it only the label counts)."""
     try:
         pr = forge_get("/pulls/%d" % number)

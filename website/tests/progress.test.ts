@@ -8,7 +8,7 @@ import { collectFeed } from '../src/lib/progress-feed.ts';
 const time = '2026-11-11T12:00:00Z';
 const raw = (n = 1, extra = {}) => ({ number: n, title: 'Controller stops responding', state: 'open', updated_at: time, labels: [], ...extra });
 const release = { id: 100, name: 'Version 2.1.0', tag_name: 'v2.1.0', updated_at: time, published_at: time, draft: false, prerelease: false };
-const body = (version, area = 'Low fps or stutter') => `### Longshot version\n\n${version}\n\n### What kind of problem\n\n${area}\n\n### Description\n\nprivate log excerpts are not published`;
+const body = (version, area = 'Low fps or stutter') => `### Hookshot version\n\n${version}\n\n### What kind of problem\n\n${area}\n\n### Description\n\nprivate log excerpts are not published`;
 function feed(items = [normalizeItem(raw(), 'issue')]) {
   return { version: 1, repository: REPOSITORY, generatedAt: time, collectionStartedAt: time, closedSince: '2026-08-13T12:00:00Z', warning: '',
     stableRelease: { tag: 'v2.1.0', url: `${ROOT}/releases/tag/v2.1.0`, publishedAt: time }, items };
@@ -51,14 +51,14 @@ test('curation expires when source changes and rejects unsafe evidence', () => {
 
 test('version matching uses only exact report fields, not text guesses', () => {
   assert.equal(exactVersion('`v2.1.0`'), '2.1.0');
-  for (const text of ['latest', '2.1.0 or 2.0.9', 'longshot abc123', '02.1.0', 'v2.1.0 Windows', '']) assert.equal(exactVersion(text), null);
+  for (const text of ['latest', '2.1.0 or 2.0.9', 'hookshot abc123', '02.1.0', 'v2.1.0 Windows', '']) assert.equal(exactVersion(text), null);
   assert.equal(reportEvidence(body('v2.1.0')).version, '2.1.0');
   assert.equal(reportEvidence(body('v2.1.0', 'Sound')).reportedArea, 'Audio');
   assert.equal(reportEvidence(body('v2.1.0', 'Controls')).reportedArea, 'Controls');
   assert.equal(reportEvidence(body('v2.1.0-rc.1')).version, '2.1.0-rc.1');
   assert.equal(reportEvidence('Mentioned v2.1.0 in a comment').version, null);
   assert.equal(reportEvidence(body('latest')).version, null);
-  assert.equal(reportEvidence(body('v2.1.0') + '\n### Longshot version\n\nv2.0.9').version, null);
+  assert.equal(reportEvidence(body('v2.1.0') + '\n### Hookshot version\n\nv2.0.9').version, null);
   assert.equal(reportEvidence(body('v2.1.0') + '\n### Builder version\n\nv2.0.9').version, null);
   assert.equal(reportEvidence('### Builder version\n\nv2.1.0').reportedArea, 'Setup');
   assert.equal(reportEvidence('### Version\n\nv2.1.0').versionSource, 'Installation version field');
@@ -94,7 +94,7 @@ test('search combines query terms and every filter, including source numbers and
 
 test('feed validation rejects unsafe URLs, duplicate IDs and malformed records', () => {
   validateFeed(feed());
-  for (const url of ['javascript:alert(1)', 'https://git.magicbean.dev.evil/MagicBeanDev/Longshot/issues/1', `${ROOT}/issues/2`, 'https://git.magicbean.dev/MagicBeanDev/Longshot/pull/1']) {
+  for (const url of ['javascript:alert(1)', 'https://git.magicbean.dev.evil/MagicBeanDev/Hookshot/issues/1', `${ROOT}/issues/2`, 'https://git.magicbean.dev/MagicBeanDev/Hookshot/pull/1']) {
     const data = feed(); data.items[0].url = url;
     assert.throws(() => validateFeed(data));
   }
@@ -115,7 +115,7 @@ test('collector paginates open items, stops old closed history and keeps PRs sep
     if (u.searchParams.get('state') === 'closed') return response([raw(999, { state: 'closed', updated_at: '2020-01-01T00:00:00Z' })]);
     if (u.pathname.endsWith('/pulls')) return response([raw(500, { merged_at: null })]);
     if (page === 1) return response(Array.from({ length: 100 }, (_, i) => raw(i + 1, { body: body('v2.1.0'), ...(i === 0 ? { pull_request: {} } : {}) })), 200,
-      { link: '<https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Longshot/issues?state=open&page=2>; rel="next"' });
+      { link: '<https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Hookshot/issues?state=open&page=2>; rel="next"' });
     return response([raw(123, { html_url: 'https://evil.invalid', user: { login: 'not-published' }, body: 'not-published' })]);
   };
   const data = await collectFeed({ fetcher, token: 'test-only', now: Date.parse(time) });
@@ -130,7 +130,7 @@ test('collector paginates open items, stops old closed history and keeps PRs sep
 test('failed or truncated collection never returns a partial feed', async () => {
   await assert.rejects(collectFeed({ wait: async () => {}, fetcher: async url => url.endsWith('/latest') ? response(release) : response({}, 503) }));
   await assert.rejects(collectFeed({ maxPages: 1, now: Date.parse(time), fetcher: async url => url.endsWith(REPOSITORY) ? response(repository) : url.endsWith('/latest') ? response(release) : response(Array.from({ length: 100 }, (_, i) => raw(i + 1)), 200,
-    { link: '<https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Longshot/issues?state=closed&after=cursor>; rel="next"' }) }), /pagination limit/);
+    { link: '<https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Hookshot/issues?state=closed&after=cursor>; rel="next"' }) }), /pagination limit/);
 });
 
 test('pagination never forwards the token to another host or endpoint', async () => {

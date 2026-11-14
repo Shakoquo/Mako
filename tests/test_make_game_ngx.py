@@ -22,7 +22,7 @@ spec.loader.exec_module(make_game)
 
 class NgxRuntimeTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="longshot-make-game-ngx-")
+        self.temp = tempfile.TemporaryDirectory(prefix="hookshot-make-game-ngx-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.sdk = self.root / "sdk"
@@ -42,7 +42,7 @@ class NgxRuntimeTests(unittest.TestCase):
                 Path(self.ngx.runtime(str(self.sdk), platform, "framegen")).write_bytes(b"framegen")
 
     def place(self, platform, sdk=None, said=None):
-        env = {"LONGSHOT_NGX_SDK": str(self.sdk) if sdk is None else sdk}
+        env = {"HOOKSHOT_NGX_SDK": str(self.sdk) if sdk is None else sdk}
         with mock.patch.object(make_game, "LINUX", platform == "linux"), mock.patch.dict(os.environ, env), \
                 mock.patch("sys.stdout", io.StringIO()) as out:
             dst = make_game.place_ngx_runtime(str(self.out))
@@ -62,7 +62,7 @@ class NgxRuntimeTests(unittest.TestCase):
         self.assertFalse([p for p in self.out.rglob("*") if p.name.lower() == "_nvngx.dll"])
 
     def built(self, platform, sdk=None):
-        env = {"LONGSHOT_NGX_SDK": str(self.sdk) if sdk is None else sdk}
+        env = {"HOOKSHOT_NGX_SDK": str(self.sdk) if sdk is None else sdk}
         with mock.patch.object(make_game, "LINUX", platform == "linux"), mock.patch.dict(os.environ, env):
             return make_game.ngx_built()
 
@@ -75,7 +75,7 @@ class NgxRuntimeTests(unittest.TestCase):
         self.assertFalse(self.built("windows"))   # (another platform's library only)
 
     def test_fsr_build(self):
-        """--fsr: LONGSHOT_FSR=1 for nx2/build.py; an --update of that folder keeps it (its mark), --no-fsr takes it out. (The
+        """--fsr: HOOKSHOT_FSR=1 for nx2/build.py; an --update of that folder keeps it (its mark), --no-fsr takes it out. (The
         camera jitter FSR 4 needs is in every build: nx2/lift.py)"""
         out = str(self.out)
         mark = self.out / make_game.FSR_MARK
@@ -121,7 +121,7 @@ class FetchGateTests(unittest.TestCase):
     def fetch(self, accept, sdk="sdk"):
         calls = []
         ngx = SimpleNamespace(NOTICE="notice", fetch=lambda *a, **k: calls.append(a))
-        with mock.patch.object(make_game, "ngx_script", return_value=ngx), mock.patch.dict(os.environ, {"LONGSHOT_NGX_SDK": sdk}), \
+        with mock.patch.object(make_game, "ngx_script", return_value=ngx), mock.patch.dict(os.environ, {"HOOKSHOT_NGX_SDK": sdk}), \
                 mock.patch("sys.stdout", io.StringIO()) as out:
             try:
                 make_game.fetch_ngx_sdk(SimpleNamespace(accept_nvidia_license=accept))
@@ -136,7 +136,7 @@ class FetchGateTests(unittest.TestCase):
         self.assertIn("license", out)
 
     def test_without_the_variable_the_sdk_goes_to_work_ngx_sdk(self):
-        # (the Builder's --cli drops LONGSHOT_NGX_SDK, so a launcher's --fetch-ngx-sdk has to work without it)
+        # (the Builder's --cli drops HOOKSHOT_NGX_SDK, so a launcher's --fetch-ngx-sdk has to work without it)
         calls, code, _ = self.fetch(True, sdk="")
         folder = os.path.join(make_game.ROOT, "work", "ngx-sdk")
         self.assertEqual((calls, code), ([(folder, make_game.ngx_platform())], 0))
@@ -155,25 +155,25 @@ class FetchGateTests(unittest.TestCase):
 
 
 class NoScriptTests(unittest.TestCase):
-    """The AppImage carries no scripts/ (scripts/linux/appimage.sh): with LONGSHOT_NGX_SDK set there, ngx_script() says so and
+    """The AppImage carries no scripts/ (scripts/linux/appimage.sh): with HOOKSHOT_NGX_SDK set there, ngx_script() says so and
     stops, not a FileNotFoundError traceback from importlib"""
 
     def test_missing_script_is_said_plainly(self):
-        with tempfile.TemporaryDirectory(prefix="longshot-no-scripts-") as root, mock.patch.object(make_game, "ROOT", root), \
-                mock.patch.dict(os.environ, {"LONGSHOT_NGX_SDK": os.path.join(root, "sdk")}), \
+        with tempfile.TemporaryDirectory(prefix="hookshot-no-scripts-") as root, mock.patch.object(make_game, "ROOT", root), \
+                mock.patch.dict(os.environ, {"HOOKSHOT_NGX_SDK": os.path.join(root, "sdk")}), \
                 mock.patch("sys.stdout", io.StringIO()) as out:
             with self.assertRaises(SystemExit) as stopped:
                 make_game.place_ngx_runtime(os.path.join(root, "game"))
         self.assertEqual(stopped.exception.code, 1)
         self.assertIn("@@error", out.getvalue())
         self.assertIn("ngx_sdk.py", out.getvalue())
-        self.assertIn("Unset LONGSHOT_NGX_SDK", out.getvalue())
+        self.assertIn("Unset HOOKSHOT_NGX_SDK", out.getvalue())
 
 
 class AppImageDlssTests(unittest.TestCase):
     def test_build_and_appimage_package_dlss_sources(self):
         build_py = (ROOT / "nx2" / "build.py").read_text(encoding="utf-8")
-        self.assertIn('return "" if NGX_SDK or FSR else os.environ.get("LONGSHOT_VK_PREBUILT", "")', build_py)
+        self.assertIn('return "" if NGX_SDK or FSR else os.environ.get("HOOKSHOT_VK_PREBUILT", "")', build_py)
         self.assertIn('vk_prebuilt = prebuilt_renderer()', build_py)
         appimage = (ROOT / "scripts" / "linux" / "appimage.sh").read_text(encoding="utf-8")
         for piece in ("cp scripts/ngx_sdk.py", "cp -a gpu/vk gpu/compat gpu/third_party", "third_party/imgui"):

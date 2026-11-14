@@ -21,5 +21,5 @@ If setup cannot complete the runtime, rerun the official setup and inspect the r
 When the post-extraction check reports missing startup files, it includes the executable and staging folder paths.
 Check the antivirus quarantine/history for files removed from that folder before retrying; repeatedly running setup
 does not address files being quarantined again.
-A game folder's `longshot.exe` starts its game without the Builder, so a failed readiness check never stops play. The
+A game folder's `hookshot.exe` starts its game without the Builder, so a failed readiness check never stops play. The
 fixtures in `tests/test_setup_runtime*.py` use authored files and intercept publication writes; they do not execute the Builder or prove that the original missing-file cause is resolved.

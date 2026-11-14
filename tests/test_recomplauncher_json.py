@@ -32,7 +32,7 @@ class RecompLauncherJsonTests(unittest.TestCase):
                       (ROOT / "scripts" / "linux" / "appimage.sh").read_text(encoding="utf-8"))
 
     def test_windows_zip_carries_it(self):
-        # (scripts/builder_package.py zip: the setup as LongshotBuilder.exe, the builder, tools.lock and VERSION, and this
+        # (scripts/builder_package.py zip: the setup as HookshotBuilder.exe, the builder, tools.lock and VERSION, and this
         # file at the top, where RecompLauncher reads it; the setup installs the tools tools.lock names, with no release lookup)
         import importlib.util, tempfile, zipfile
         spec = importlib.util.spec_from_file_location("builder_package", ROOT / "scripts" / "builder_package.py")
@@ -41,29 +41,29 @@ class RecompLauncherJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp) / "package"
             (package / "tools").mkdir(parents=True)
-            (package / "LongshotBuilder.exe").write_bytes(b"MZ builder")
+            (package / "HookshotBuilder.exe").write_bytes(b"MZ builder")
             setup = Path(tmp) / "setup.exe"
             setup.write_bytes(b"MZ setup")
-            out = Path(tmp) / "LongshotBuilder-v3.0.0-windows-x64.zip"
+            out = Path(tmp) / "HookshotBuilder-v3.0.0-windows-x64.zip"
             import contextlib, io
             with contextlib.redirect_stdout(io.StringIO()):
                 bp.make_zip(str(package), "v3.0.0", str(setup), str(out))
             with zipfile.ZipFile(out) as z:
-                self.assertEqual(sorted(z.namelist()), ["LongshotBuilder.exe", "LongshotBuilder/LongshotBuilder.exe",
-                                                        "LongshotBuilder/tools/version.txt", "VERSION",
+                self.assertEqual(sorted(z.namelist()), ["HookshotBuilder.exe", "HookshotBuilder/HookshotBuilder.exe",
+                                                        "HookshotBuilder/tools/version.txt", "VERSION",
                                                         "recomplauncher.json", "tools.lock"])
-                self.assertEqual(z.read("LongshotBuilder.exe"), b"MZ setup")
+                self.assertEqual(z.read("HookshotBuilder.exe"), b"MZ setup")
                 self.assertEqual(z.read("VERSION"), b"v3.0.0\n")
-                # (and where the builder and the game read it: without it a release's game logged "longshot unknown")
-                self.assertEqual(z.read("LongshotBuilder/tools/version.txt"), b"v3.0.0\n")
+                # (and where the builder and the game read it: without it a release's game logged "hookshot unknown")
+                self.assertEqual(z.read("HookshotBuilder/tools/version.txt"), b"v3.0.0\n")
         manifest = json.loads((ROOT / "recomplauncher.json").read_text(encoding="utf-8"))
-        self.assertIn("LongshotBuilder.exe", manifest["start"]["program"])
-        self.assertIn("LongshotBuilder.exe", manifest["prepare"]["program"])
+        self.assertIn("HookshotBuilder.exe", manifest["start"]["program"])
+        self.assertIn("HookshotBuilder.exe", manifest["prepare"]["program"])
         workflow = (ROOT / ".forgejo" / "workflows" / "build-windows.yml").read_text(encoding="utf-8")
-        self.assertIn('--out "dist/LongshotBuilder-$TAG-windows-x64.zip"', workflow)
+        self.assertIn('--out "dist/HookshotBuilder-$TAG-windows-x64.zip"', workflow)
 
     def test_no_repository_it_cannot_read(self):
-        # (RecompLauncher's "repo" is a GitHub owner/name, and Longshot's releases are on git.magicbean.dev: none is named)
+        # (RecompLauncher's "repo" is a GitHub owner/name, and Hookshot's releases are on git.magicbean.dev: none is named)
         manifest = json.loads((ROOT / "recomplauncher.json").read_text(encoding="utf-8"))
         self.assertNotIn("repo", manifest)
 

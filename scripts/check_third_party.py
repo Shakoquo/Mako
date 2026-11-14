@@ -177,7 +177,7 @@ def archive_files(data):
 
 
 def upstream(root, which, fetch=None):
-    fetch = fetch or (lambda url: urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "longshot-check"}),
+    fetch = fetch or (lambda url: urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "hookshot-check"}),
                                                          timeout=120).read())
     problems = []
     for part in which or parts(root):

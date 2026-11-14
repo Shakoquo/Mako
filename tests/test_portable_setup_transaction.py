@@ -55,7 +55,7 @@ int wmain(int argc, wchar_t **argv) {
     int mode = _wtoi(argv[1]);
     if (mode == 4 || mode == 5) {
         Part part = {0};
-        strcpy(part.sha,"authored-checksum"); strcpy(part.dest,"LongshotBuilder/tools/python"); strcpy(part.from,"python");
+        strcpy(part.sha,"authored-checksum"); strcpy(part.dest,"HookshotBuilder/tools/python"); strcpy(part.from,"python");
         strcpy(part.url,"https://invalid.example/python-authored.zip");
         g_home.portable = mode == 4;
         return reuse_part(argv[2],"v-new",&part,argv[3]) == _wtoi(argv[4]) ? 0 : 22;
@@ -106,35 +106,35 @@ int wmain(int argc, wchar_t **argv) {
         run(1, next_stage, fresh, 1)
         assert (fresh / "keep").read_text() == "standard candidate"
         versions = root / "versions"
-        old = versions / "v-old/LongshotBuilder/tools/python"
+        old = versions / "v-old/HookshotBuilder/tools/python"
         old.mkdir(parents=True)
         (old / "keep").write_text("original reusable part")
         (versions / "current.txt").write_text("v-old\n")
         (versions / "v-old/parts.txt").write_text("authored-checksum\n")
         candidate = versions / "v-new.part"
         run(4, versions, candidate, 1)
-        copied_part = candidate / "LongshotBuilder/tools/python/keep"
+        copied_part = candidate / "HookshotBuilder/tools/python/keep"
         assert old.is_dir() and copied_part.read_text() == "original reusable part"
         copied_part.write_text("isolated portable copy")
         assert (old / "keep").read_text() == "original reusable part"
         standard_candidate = versions / "standard.part"
         run(5, versions, standard_candidate, 1)
-        assert not old.exists() and (standard_candidate / "LongshotBuilder/tools/python/keep").read_text() == "original reusable part"
-        # (a folder copied into itself or under itself, as --portable's home once was the zip's own LongshotBuilder: refused
+        assert not old.exists() and (standard_candidate / "HookshotBuilder/tools/python/keep").read_text() == "original reusable part"
+        # (a folder copied into itself or under itself, as --portable's home once was the zip's own HookshotBuilder: refused
         # before anything is written, whatever the case or a trailing \; a sibling that only starts with its name is copied)
-        builder = root / "zip" / "LongshotBuilder"
+        builder = root / "zip" / "HookshotBuilder"
         (builder / "tools").mkdir(parents=True)
-        (builder / "LongshotBuilder.exe").write_text("builder")
-        inside = builder / "versions" / "v-new.part" / "LongshotBuilder"
+        (builder / "HookshotBuilder.exe").write_text("builder")
+        inside = builder / "versions" / "v-new.part" / "HookshotBuilder"
         started = time.monotonic()
         run(3, builder, inside, 0)
         run(3, builder, builder, 0)
         run(3, str(builder) + "\\", str(inside).upper(), 0)
         run(3, "\\\\?\\" + str(builder), str(builder).lower() + "\\x", 0)
         assert time.monotonic() - started < 30 and not (builder / "versions").exists() and not (builder / "x").exists()
-        sibling = root / "zip" / "LongshotBuilder2"
+        sibling = root / "zip" / "HookshotBuilder2"
         run(3, builder, sibling, 1)
-        assert (sibling / "LongshotBuilder.exe").read_text() == "builder" and (sibling / "tools").is_dir()
+        assert (sibling / "HookshotBuilder.exe").read_text() == "builder" and (sibling / "tools").is_dir()
         # (a tree deeper than MAX_PATH, as the builder zip unpacked a little deep is: copied whole, and removed whole)
         deep = root / "deep source"
         deep_dir = deep

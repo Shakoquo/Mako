@@ -1,4 +1,4 @@
-// (longshot) RX_VK_RECORDER: the command buffer calls as packets, step 1 of a recorder thread (the "sync" phase).
+// (hookshot) RX_VK_RECORDER: the command buffer calls as packets, step 1 of a recorder thread (the "sync" phase).
 //
 // Every vkCmd* call vk_work.h routes here is copied into a packet: its value arguments, and every array and struct it points to (the
 // descriptor writes and the image/buffer/texel infos they point to, push constant bytes, vertex buffer arrays, the rendering info and
@@ -59,8 +59,8 @@
 #endif
 
 #include "vk_loader.h"
-#if __has_include("longshot_env.h")
-#include "longshot_env.h"   // (env_on: the switches' one rule; the checks paste it ahead of this file themselves)
+#if __has_include("hookshot_env.h")
+#include "hookshot_env.h"   // (env_on: the switches' one rule; the checks paste it ahead of this file themselves)
 #endif
 
 namespace mkwvk {

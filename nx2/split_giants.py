@@ -277,7 +277,7 @@ def split_text(src, piece_kb=PIECE_KB, min_kb=MIN_KB, only=None, notes=None):
     return "".join(out), stats
 
 
-FLAG = "-DLONGSHOT_SPLIT_GIANTS="
+FLAG = "-DHOOKSHOT_SPLIT_GIANTS="
 
 
 def flag(piece_kb=PIECE_KB):

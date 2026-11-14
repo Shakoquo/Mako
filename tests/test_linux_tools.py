@@ -1,5 +1,5 @@
 """The Linux builder's build tools (builder/linux/linux_tools.py, builder/linux/AppRun), with authored archives and no network:
-the AppImage carries none of tools.lock's linux-x64 tools. They are found where the Longshot Launcher unpacked them (beside
+the AppImage carries none of tools.lock's linux-x64 tools. They are found where the Hookshot Launcher unpacked them (beside
 the builder, or in its own copy of the version), else in the builder's toolchains folder, where the first start downloads
 them, checked by their SHA-256, with progress, and where a later start finds them with no connection. A tool another
 version has is linked, not downloaded again. AppRun's --cli (RecompLauncher's --cli --prepare) gets them first and stops
@@ -46,15 +46,15 @@ def archive(path, top, files):
 @unittest.skipUnless(os.name == "posix", "the Linux builder")
 class Tools(unittest.TestCase):
     def setUp(self):
-        self.dir = Path(tempfile.mkdtemp(prefix="longshot-linux-tools-"))
+        self.dir = Path(tempfile.mkdtemp(prefix="hookshot-linux-tools-"))
         self.addCleanup(shutil.rmtree, self.dir, True)
         self.data = {}
         self.app = self.dir / "AppDir"   # (the mounted AppImage: read-only on a player's PC)
-        self.share = self.app / "usr/share/longshot"
+        self.share = self.app / "usr/share/hookshot"
         self.share.mkdir(parents=True)
         (self.app / "AppRun").write_text("#!/bin/sh\n")
         (self.share / "VERSION").write_text(TAG + "\n")
-        self.env = {"LONGSHOT_BUILDER_HOME": str(self.dir / "data"), "LONGSHOT_LAUNCHER_HOME": str(self.dir / "launcher"),
+        self.env = {"HOOKSHOT_BUILDER_HOME": str(self.dir / "data"), "HOOKSHOT_LAUNCHER_HOME": str(self.dir / "launcher"),
                     "HOME": str(self.dir / "home")}
         self.write_lock(emsdk="clang 1", sdl2="sdl 1")
         self.asked = []
@@ -65,9 +65,9 @@ class Tools(unittest.TestCase):
             files = {"emsdk": {"upstream/bin/clang": "#!/bin/sh\n" + text}, "sdl2": {"libSDL2-2.0.so.0": text}}[name]
             sha, size, data = archive(self.dir / ("%s-%s.zip" % (name, text.replace(" ", ""))), name, files)
             self.data["https://tools.example/" + sha] = data
-            dest = "usr/lib/longshot/" + name
+            dest = "usr/lib/hookshot/" + name
             lines.append("tool %s 1 linux-x64 %s %d %s %s https://tools.example/%s" % (name, sha, size, dest, name, sha))
-        lines.append("tool emsdk 1 windows-x64 %s 10 LongshotBuilder/tools/emsdk emsdk https://tools.example/w" % ("c" * 64))
+        lines.append("tool emsdk 1 windows-x64 %s 10 HookshotBuilder/tools/emsdk emsdk https://tools.example/w" % ("c" * 64))
         (self.share / "tools.lock").write_text("\n".join(lines) + "\n")
 
     def getter(self, url):
@@ -95,9 +95,9 @@ class Tools(unittest.TestCase):
     def test_the_first_start_downloads_them_and_the_next_needs_no_connection(self):
         found, error, said = self.ensure()
         self.assertIsNone(error)
-        mine = self.dir / "data/longshot/builder/toolchains" / TAG
+        mine = self.dir / "data/hookshot/builder/toolchains" / TAG
         self.assertEqual(found, {"emsdk": str(mine), "sdl2": str(mine)})
-        clang = mine / "usr/lib/longshot/emsdk/upstream/bin/clang"
+        clang = mine / "usr/lib/hookshot/emsdk/upstream/bin/clang"
         self.assertTrue(os.access(clang, os.X_OK))
         self.assertEqual(tools.stamp_of(str(mine), "emsdk"), linux_tools.lock(str(self.share))[0].sha256)
         self.assertEqual(len(self.asked), 2)
@@ -106,27 +106,27 @@ class Tools(unittest.TestCase):
         self.assertEqual(said[-1], ("The build tools are ready", 1.0))
         self.assertFalse(list((mine.parent / ".downloads").glob("*.zip")))   # (the archives go once unpacked)
         env = self.env_of(found)
-        self.assertEqual(env["EMSDK"], str(mine / "usr/lib/longshot/emsdk"))
-        self.assertEqual(env["LONGSHOT_SDL2"], str(mine / "usr/lib/longshot/sdl2/libSDL2-2.0.so.0"))
+        self.assertEqual(env["EMSDK"], str(mine / "usr/lib/hookshot/emsdk"))
+        self.assertEqual(env["HOOKSHOT_SDL2"], str(mine / "usr/lib/hookshot/sdl2/libSDL2-2.0.so.0"))
         self.asked.clear()
         again, error, said = self.ensure(getter=self.offline)
         self.assertEqual((again, error, self.asked, said), (found, None, [], []))
         # (nothing written into the image)
-        self.assertEqual(sorted(p.name for p in self.app.rglob("*")), ["AppRun", "VERSION", "longshot", "share", "tools.lock", "usr"])
+        self.assertEqual(sorted(p.name for p in self.app.rglob("*")), ["AppRun", "VERSION", "hookshot", "share", "tools.lock", "usr"])
 
     def test_another_version_links_what_it_shares_and_downloads_what_changed(self):
         self.ensure()
-        old = self.dir / "data/longshot/builder/toolchains" / TAG / "usr/lib/longshot/sdl2/libSDL2-2.0.so.0"
+        old = self.dir / "data/hookshot/builder/toolchains" / TAG / "usr/lib/hookshot/sdl2/libSDL2-2.0.so.0"
         (self.share / "VERSION").write_text("v3.2.0\n")
         self.write_lock(emsdk="clang 2", sdl2="sdl 1")
         self.asked.clear()
         found, error, said = self.ensure()
         self.assertIsNone(error)
-        new = self.dir / "data/longshot/builder/toolchains/v3.2.0"
+        new = self.dir / "data/hookshot/builder/toolchains/v3.2.0"
         self.assertEqual(len(self.asked), 1)   # (emsdk only: SDL2 is the same archive)
         self.assertIn(("sdl2: kept from " + TAG, None), said)
-        self.assertEqual(os.stat(new / "usr/lib/longshot/sdl2/libSDL2-2.0.so.0").st_ino, os.stat(old).st_ino)
-        self.assertIn("clang 2", (new / "usr/lib/longshot/emsdk/upstream/bin/clang").read_text())
+        self.assertEqual(os.stat(new / "usr/lib/hookshot/sdl2/libSDL2-2.0.so.0").st_ino, os.stat(old).st_ino)
+        self.assertIn("clang 2", (new / "usr/lib/hookshot/emsdk/upstream/bin/clang").read_text())
 
     def test_the_launchers_tools_are_used_as_they_are(self):
         # (the launcher unpacked the AppImage into toolchains/<version>/ and each tool beside it, at its dest)
@@ -155,17 +155,17 @@ class Tools(unittest.TestCase):
         self.assertIn("could not be installed", error)
         self.assertEqual(found, {"emsdk": None, "sdl2": None})
         self.assertEqual(self.env_of(found), {})
-        mine = self.dir / "data/longshot/builder/toolchains" / TAG
-        self.assertFalse((mine / "usr/lib/longshot/emsdk").exists())
+        mine = self.dir / "data/hookshot/builder/toolchains" / TAG
+        self.assertFalse((mine / "usr/lib/hookshot/emsdk").exists())
         self.assertIsNone(tools.stamp_of(str(mine), "emsdk"))
 
     def test_a_tool_with_another_stamp_is_installed_again(self):
         self.ensure()
         self.write_lock(emsdk="clang 3", sdl2="sdl 1")   # (a rebuilt dev AppImage with the same name)
         found, error, _ = self.ensure()
-        mine = self.dir / "data/longshot/builder/toolchains" / TAG
+        mine = self.dir / "data/hookshot/builder/toolchains" / TAG
         self.assertIsNone(error)
-        self.assertIn("clang 3", (mine / "usr/lib/longshot/emsdk/upstream/bin/clang").read_text())
+        self.assertIn("clang 3", (mine / "usr/lib/hookshot/emsdk/upstream/bin/clang").read_text())
 
     def test_the_text_progress_goes_to_stderr(self):
         err = io.StringIO()
@@ -181,11 +181,11 @@ class AppRun(unittest.TestCase):
     """AppRun itself, in a stand-in image: its Python is this one, nx2/make_game.py prints what it was given"""
 
     def setUp(self):
-        self.dir = Path(tempfile.mkdtemp(prefix="longshot-apprun-"))
+        self.dir = Path(tempfile.mkdtemp(prefix="hookshot-apprun-"))
         self.addCleanup(shutil.rmtree, self.dir, True)
         app = self.app = self.dir / "AppDir"
-        share = app / "usr/share/longshot"
-        for rel in ("builder/linux/linux_tools.py", "builder/linux/longshot-launch", "scripts/tools.py"):
+        share = app / "usr/share/hookshot"
+        for rel in ("builder/linux/linux_tools.py", "builder/linux/hookshot-launch", "scripts/tools.py"):
             (share / rel).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / rel, share / rel)
         shutil.copy2(ROOT / "builder/linux/AppRun", app / "AppRun")
@@ -196,11 +196,11 @@ class AppRun(unittest.TestCase):
         (share / "VERSION").write_text(TAG + "\n")
         sha, size, self.data = archive(self.dir / "emsdk.zip", "emsdk", {"upstream/bin/clang": "#!/bin/sh\n"})
         # (a link no server answers: a download is "no connection" at once, and nothing leaves this PC)
-        (share / "tools.lock").write_text("tool emsdk 1 linux-x64 %s %d usr/lib/longshot/emsdk emsdk https://127.0.0.1:9/e.zip\n"
+        (share / "tools.lock").write_text("tool emsdk 1 linux-x64 %s %d usr/lib/hookshot/emsdk emsdk https://127.0.0.1:9/e.zip\n"
                                           % (sha, size))
         self.sha = sha
         self.env = {"PATH": "/usr/bin:/bin", "HOME": str(self.dir / "home"), "LANG": "C.UTF-8",
-                    "LONGSHOT_BUILDER_HOME": str(self.dir / "data")}
+                    "HOOKSHOT_BUILDER_HOME": str(self.dir / "data")}
 
     def run_app(self, *args):
         return subprocess.run([str(self.app / "AppRun"), *args], env=self.env, capture_output=True, text=True, timeout=60)
@@ -213,12 +213,12 @@ class AppRun(unittest.TestCase):
 
     def test_cli_prepare_runs_with_the_tools_found_offline(self):
         # (RecompLauncher's prepare: --cli --prepare --game <copy>, with the tools a first start put there)
-        mine = self.dir / "data/longshot/builder/toolchains" / TAG
-        tools.unpack(str(self.dir / "emsdk.zip"), "emsdk", str(mine / "usr/lib/longshot/emsdk"))
-        tools.write_stamp(str(mine), tools.parse((self.app / "usr/share/longshot/tools.lock").read_text())[0])
+        mine = self.dir / "data/hookshot/builder/toolchains" / TAG
+        tools.unpack(str(self.dir / "emsdk.zip"), "emsdk", str(mine / "usr/lib/hookshot/emsdk"))
+        tools.write_stamp(str(mine), tools.parse((self.app / "usr/share/hookshot/tools.lock").read_text())[0])
         r = self.run_app("--cli", "--prepare", "--game", "/nowhere")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("make_game ['--prepare', '--game', '/nowhere'] %s" % (mine / "usr/lib/longshot/emsdk"), r.stdout)
+        self.assertIn("make_game ['--prepare', '--game', '/nowhere'] %s" % (mine / "usr/lib/hookshot/emsdk"), r.stdout)
 
     def test_play_needs_no_build_tool(self):
         r = self.run_app("--play", str(self.dir / "no-game"))
@@ -228,7 +228,7 @@ class AppRun(unittest.TestCase):
         self.assertFalse((self.dir / "data").exists())
 
     def test_launch_plays_that_folder_with_no_build_tool(self):
-        # (a game folder's longshot starts the AppImage that built it with --cli with --launch <folder>: builder/linux/longshot-folder)
+        # (a game folder's hookshot starts the AppImage that built it with --cli with --launch <folder>: builder/linux/hookshot-folder)
         folder = self.dir / "no-game"
         folder.mkdir()
         r = self.run_app("--launch", str(folder))
@@ -242,8 +242,8 @@ class AppRun(unittest.TestCase):
         for args in ((), ("--update", str(self.dir)), ("--repair",), ("--launch",)):
             r = self.run_app(*args)
             self.assertEqual(r.returncode, 1, args)
-            self.assertIn("Longshot Launcher", r.stderr, args)
-            self.assertIn("https://longshot.magicbean.dev/download", r.stderr, args)
+            self.assertIn("Hookshot Launcher", r.stderr, args)
+            self.assertIn("https://hookshot.magicbean.dev/download", r.stderr, args)
             self.assertEqual(r.stdout, "", args)
         self.assertFalse((self.dir / "data").exists())
 
@@ -254,7 +254,7 @@ class AppRun(unittest.TestCase):
         play = text[text.index('if [ "${1:-}" = "--play" ]'):]
         self.assertNotIn("build_tools", play)
         self.assertNotIn("--gui", text)
-        self.assertNotIn("longshot_builder.py", text)
+        self.assertNotIn("hookshot_builder.py", text)
 
 if __name__ == "__main__":
     unittest.main()

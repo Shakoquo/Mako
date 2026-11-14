@@ -1,14 +1,14 @@
 # Releasing
 
-How a maintainer releases **Longshot** (MagicBeanDev/Longshot) and the **Longshot Launcher**
-(MagicBeanDev/LongshotLauncher). This file is the same in both repositories. The design (what a release is, the
+How a maintainer releases **Hookshot** (MagicBeanDev/Hookshot) and the **Hookshot Launcher**
+(MagicBeanDev/HookshotLauncher). This file is the same in both repositories. The design (what a release is, the
 channels, signing, `tools.lock`, how the launcher reads it) is in [docs/releases.md](docs/releases.md).
 
-| | Longshot | The launcher |
+| | Hookshot | The launcher |
 |---|---|---|
-| Repository | [MagicBeanDev/Longshot](https://git.magicbean.dev/MagicBeanDev/Longshot) | [MagicBeanDev/LongshotLauncher](https://git.magicbean.dev/MagicBeanDev/LongshotLauncher) |
+| Repository | [MagicBeanDev/Hookshot](https://git.magicbean.dev/MagicBeanDev/Hookshot) | [MagicBeanDev/HookshotLauncher](https://git.magicbean.dev/MagicBeanDev/HookshotLauncher) |
 | First version | `v3.0.0` (rc first: `v3.0.0-rc.1`) | `v1.0.0` (rc first: `v1.0.0-rc.1`) |
-| What a release ships | the Windows and Linux builders, `tools.lock` | the launcher: `LongshotLauncher-<v>-windows-x64-setup.exe` (installs itself or runs portable: docs/releases.md, *Installing the launcher*), `LongshotLauncher-<v>-windows-x64-portable.zip`, `LongshotLauncher-<v>-x86_64.AppImage` |
+| What a release ships | the Windows and Linux builders, `tools.lock` | the launcher: `HookshotLauncher-<v>-windows-x64-setup.exe` (installs itself or runs portable: docs/releases.md, *Installing the launcher*), `HookshotLauncher-<v>-windows-x64-portable.zip`, `HookshotLauncher-<v>-x86_64.AppImage` |
 | Nightly count | commits since the fork, e2a4d45 | commits since the first commit |
 
 Both have the same three channels: **stable**, **rc** and **nightly**. In the launcher, players pick a channel for their
@@ -23,25 +23,25 @@ Contents:
 - [A hotfix](#a-hotfix)
 - [Pulling a bad release](#pulling-a-bad-release)
 - [When CI refuses a tag](#when-ci-refuses-a-tag)
-- [Needs a Windows tester (Longshot)](#needs-a-windows-tester-longshot)
-- [Bump a tool (Longshot)](#bump-a-tool-longshot)
+- [Needs a Windows tester (Hookshot)](#needs-a-windows-tester-hookshot)
+- [Bump a tool (Hookshot)](#bump-a-tool-hookshot)
 - [Rotate the key](#rotate-the-key)
 - [One-time setup](#one-time-setup)
 - [Troubleshooting](#troubleshooting)
 
 ## The commands
 
-Everything is `scripts/release.py` (the same file in both repositories), and for Longshot's tools `scripts/tools.py`.
+Everything is `scripts/release.py` (the same file in both repositories), and for Hookshot's tools `scripts/tools.py`.
 `release.py next` and `notes` need git-cliff:
 
 ```sh
-export GIT_CLIFF=$(python -I scripts/release.py git-cliff ~/.cache/longshot-cliff)   # the pinned git-cliff, checked
+export GIT_CLIFF=$(python -I scripts/release.py git-cliff ~/.cache/hookshot-cliff)   # the pinned git-cliff, checked
 python -I scripts/release.py next          # the number the commits call for, the next rc's tag, and its notes
 python -I scripts/release.py channels      # what stable, rc and nightly offer now, as the launcher reads them
 ```
 
-The remote is called `forge` here (Longshot's `scripts/forge.py login` sets it up; in the launcher's checkout, add
-`https://git.magicbean.dev/MagicBeanDev/LongshotLauncher.git` under that name). Only maintainers can push tags.
+The remote is called `forge` here (Hookshot's `scripts/forge.py login` sets it up; in the launcher's checkout, add
+`https://git.magicbean.dev/MagicBeanDev/HookshotLauncher.git` under that name). Only maintainers can push tags.
 
 ## A nightly
 
@@ -63,7 +63,7 @@ Players on the nightly channel keep the last good nightly until then.
 1. **Preview.** Run `python -I scripts/release.py next` on an up-to-date `main` (`jj git fetch --remote forge` and
    `jj new main@forge`, or `git fetch forge` and `git switch --detach forge/main`). It prints:
    - the number the commits since the last stable call for (feat: minor, fix and perf: patch, `!` or `BREAKING CHANGE:`:
-     major; the first release: `v3.0.0` for Longshot, `v1.0.0` for the launcher);
+     major; the first release: `v3.0.0` for Hookshot, `v1.0.0` for the launcher);
    - the next tag, e.g. `v3.1.0-rc.1` (or `-rc.2` when `-rc.1` is out);
    - the notes git-cliff will write.
 
@@ -73,11 +73,11 @@ Players on the nightly channel keep the last good nightly until then.
 
    ```sh
    # git
-   git tag -a v3.1.0-rc.1 -m "Longshot v3.1.0-rc.1" forge/main
+   git tag -a v3.1.0-rc.1 -m "Hookshot v3.1.0-rc.1" forge/main
    git push forge v3.1.0-rc.1
    # jj: jj does not push tags, so the tag is made and pushed with git (a jj clone is colocated with git)
    jj git fetch --remote forge
-   git tag -a v3.1.0-rc.1 -m "Longshot v3.1.0-rc.1" "$(jj log -r main@forge --no-graph -T commit_id)"
+   git tag -a v3.1.0-rc.1 -m "Hookshot v3.1.0-rc.1" "$(jj log -r main@forge --no-graph -T commit_id)"
    git push forge v3.1.0-rc.1
    ```
 
@@ -87,9 +87,9 @@ Players on the nightly channel keep the last good nightly until then.
 3. **What CI does** (`release.yml`): it checks the tag (`check-tag`: its form, on `main`, above every release, as high as the
    commits call for). It builds both systems' files, writes and signs `SHA256SUMS`, checks the signature with the key the
    launcher trusts, writes the notes with git-cliff, uploads everything to a draft, and publishes it as a pre-release.
-   The page has a header above the notes: the launcher's links its own files; Longshot's sends players to the launcher
+   The page has a header above the notes: the launcher's links its own files; Hookshot's sends players to the launcher
    of the same channel ([docs/releases.md](docs/releases.md#release-notes)).
-   For Longshot, when the commit's nightly is still published (CI keeps the newest 5), `release.py released-as` finds it
+   For Hookshot, when the commit's nightly is still published (CI keeps the newest 5), `release.py released-as` finds it
    and checks its signed `SHA256SUMS`: the build checks that ship no file (the Windows Vulkan back end, AMD FSR 4) passed
    in its run and are not run again. The files are built again: each carries its version.
 4. **Check it.**
@@ -98,10 +98,10 @@ Players on the nightly channel keep the last good nightly until then.
    - Download `SHA256SUMS`, `SHA256SUMS.sig` and the files, and run
      `python -I scripts/release.py verify SHA256SUMS --files <folder>`.
    - In a launcher set to the rc channel (Settings), Retry offers it.
-   - For the launcher: within a minute, `https://longshot.magicbean.dev/download/launcher/rc` goes to it (and, for a stable,
+   - For the launcher: within a minute, `https://hookshot.magicbean.dev/download/launcher/rc` goes to it (and, for a stable,
      `/download/launcher/stable`).
-5. Ask testers on the rc channel to try it, and for Longshot one on Windows for what CI can't check
-   ([Needs a Windows tester](#needs-a-windows-tester-longshot)). Fixes go in as pull requests; each round is a new rc tag
+5. Ask testers on the rc channel to try it, and for Hookshot one on Windows for what CI can't check
+   ([Needs a Windows tester](#needs-a-windows-tester-hookshot)). Fixes go in as pull requests; each round is a new rc tag
    (`-rc.2`).
 
 ## A stable from a tested release candidate
@@ -109,16 +109,16 @@ Players on the nightly channel keep the last good nightly until then.
 When an rc has been tested and nothing blocks it, tag **the same commit** as stable:
 
 ```sh
-git tag -a v3.1.0 -m "Longshot v3.1.0" v3.1.0-rc.2^{}
+git tag -a v3.1.0 -m "Hookshot v3.1.0" v3.1.0-rc.2^{}
 git push forge v3.1.0
 # jj: the commit of the rc tag
-git tag -a v3.1.0 -m "Longshot v3.1.0" "$(jj log -r 'v3.1.0-rc.2' --no-graph -T commit_id)"
+git tag -a v3.1.0 -m "Hookshot v3.1.0" "$(jj log -r 'v3.1.0-rc.2' --no-graph -T commit_id)"
 git push forge v3.1.0
 ```
 
 Web UI: *New release*, tag `v3.1.0`, target: the rc's commit, **Create tag**.
 
-CI builds it again from that commit (its files carry the version; for Longshot, the build checks the rc's run passed are
+CI builds it again from that commit (its files carry the version; for Hookshot, the build checks the rc's run passed are
 not run again: `release.py released-as`), signs and publishes it: it appears on **stable** and on **rc**. Its notes cover every
 change since the previous stable, the release candidates included. A later commit of `main` can be tagged instead, but
 then it was not what testers tried.
@@ -152,7 +152,7 @@ The *version* step of `release.yml` says why. Nothing was built. Delete the tag 
 
 | The error says | Do |
 |---|---|
-| `is not vX.Y.Z or vX.Y.Z-rc.N` | A typo, or Longshot below v3 / the launcher below v1: tag the right name |
+| `is not vX.Y.Z or vX.Y.Z-rc.N` | A typo, or Hookshot below v3 / the launcher below v1: tag the right name |
 | `is not on main` | Tag a commit of `main` (`forge/main`), not of a branch |
 | `is not above every release there is` | The number is taken or lower: `release.py next` gives the next one |
 | `is lower than the commits since vX call for: at least vY` | A `feat` or a breaking change came in: tag `vY` (or `vY-rc.1`) |
@@ -160,18 +160,18 @@ The *version* step of `release.yml` says why. Nothing was built. Delete the tag 
 
 To check before pushing: `python -I scripts/release.py check-tag <tag>` (it reads the release list; tag it locally first).
 
-## Needs a Windows tester (Longshot)
+## Needs a Windows tester (Hookshot)
 
-There is no Windows runner: every job runs on Linux, and Longshot's Windows files are cross-built there (the setup and the
+There is no Windows runner: every job runs on Linux, and Hookshot's Windows files are cross-built there (the setup and the
 Vulkan back end with llvm-mingw's Linux build of `tools.lock`'s release, the builder (command-line only) with `dotnet publish -r win-x64
 -p:EnableWindowsTargeting=true`). CI checks them as Windows files (PE headers, imports, resources, the .NET runtime:
 `scripts/check_windows_files.py`) and starts the setup and the builder under Wine, which only shows that they load. For each
 release candidate, before its stable, a tester on Windows 10 or 11:
 
-- **Builds and plays.** With the Longshot Launcher, build this version from your own copy and play to the title screen.
-  Then unzip `LongshotBuilder-<v>-windows-x64.zip` and run `LongshotBuilder.exe --cli --prepare --game <your copy>` (as
+- **Builds and plays.** With the Hookshot Launcher, build this version from your own copy and play to the title screen.
+  Then unzip `HookshotBuilder-<v>-windows-x64.zip` and run `HookshotBuilder.exe --cli --prepare --game <your copy>` (as
   RecompLauncher does): the setup installs the builder and downloads the tools, then builds. Started by a double-click,
-  the setup and `LongshotBuilder\LongshotBuilder.exe` each show only the message that sends players to the launcher; the
+  the setup and `HookshotBuilder\HookshotBuilder.exe` each show only the message that sends players to the launcher; the
   setup shows its icon.
 - **Notes what Windows says.** Nothing is signed: what SmartScreen and the antivirus do with the zip and the setup.
 - **Runs the checks only Windows can** (they were `ci.yml`'s `windows-2022` jobs, which nothing could run): the suite on
@@ -184,7 +184,7 @@ release candidate, before its stable, a tester on Windows 10 or 11:
 
 A failure is an issue, and blocks the stable as any other would.
 
-## Bump a tool (Longshot)
+## Bump a tool (Hookshot)
 
 The builders' tools are in `tools.lock` (docs/releases.md, "tools.lock"): `windows-x64` lines for Windows, `linux-x64`
 for Linux. A bump is a pull request that changes its line:
@@ -199,14 +199,14 @@ for Linux. A bump is a pull request that changes its line:
      folder, `sha256`, size, URL), which CI builds the Windows files with (`tests/test_windows_on_linux.py` checks that
      the two versions match).
   4. `python -I scripts/tools.py check --require`, and open the pull request (`build(windows): llvm-mingw 20261201`).
-- **An archive Longshot makes** (Python with new pins, the CPM cache with a new package, the `third_party` prebuilt files,
+- **An archive Hookshot makes** (Python with new pins, the CPM cache with a new package, the `third_party` prebuilt files,
   the profile):
   ```sh
   python -I scripts/tools.py assemble python --requirements nx2/prompt_requirements.txt --out python.zip
   python -I scripts/tools.py assemble cpm --add <cpm folder> --out cpm.zip   # (its dav1d/<version>: scripts/windows/dav1d.sh <cpm folder>)
   python -I scripts/tools.py assemble third-party --from <an archive with tools/third_party> --out third-party.zip
   python -I scripts/tools.py assemble profile --work work --out profile.zip
-  RELEASE_TOKEN=<your token> python -I scripts/tools.py add python 3.14.2-1 python.zip --dest LongshotBuilder/tools/python --prefix python
+  RELEASE_TOKEN=<your token> python -I scripts/tools.py add python 3.14.2-1 python.zip --dest HookshotBuilder/tools/python --prefix python
   ```
   `add` publishes the archive as a new package version (`<name>-<system>/<version>/<sha256>-<name>.zip`, under the
   organization's *Packages*) and writes the line. A version's files never change: new bytes are a new version. Check that nothing made
@@ -219,7 +219,7 @@ for Linux. A bump is a pull request that changes its line:
      `build-linux/docker-deps` and packs each as `tools/<name>.zip`, writing the `tools.py add` lines into
      `tools/add.sh`.
   3. Run the lines of the tools you changed, with your token: `RELEASE_TOKEN=<your token> python -I scripts/tools.py add
-     emsdk 23.1.5 build-linux/docker-deps/tools/emsdk.zip --system linux-x64 --dest usr/lib/longshot/emsdk --prefix emsdk`.
+     emsdk 23.1.5 build-linux/docker-deps/tools/emsdk.zip --system linux-x64 --dest usr/lib/hookshot/emsdk --prefix emsdk`.
      An archive over 100 MB (emsdk) goes through the address without Cloudflare: `FORGEJO_UPLOAD_API=<it>` (One-time
      setup, the upload address).
   4. `scripts/linux/docker.sh` builds the AppImage with the new lines (`appimage.sh` installs them into
@@ -239,7 +239,7 @@ When the key may have leaked, or on a schedule:
 
 1. `python -I scripts/release.py keygen <safe folder>` makes `release.pem` and `release.pub.pem` and prints the lines.
 2. **The launcher first.** Add the new `ReleaseKey.FromSpki("...")` line to `Core/ReleaseTrust.cs`, beside the old one, and
-   the same base64 to Longshot's `scripts/release_keys.json`. Release the launcher (rc, then stable) **signed with the old
+   the same base64 to Hookshot's `scripts/release_keys.json`. Release the launcher (rc, then stable) **signed with the old
    key**. Launchers update to it and then trust both keys.
 3. **Then switch.** Wait until most players have that launcher (the stable for a few weeks). Replace the secret
    `RELEASE_SIGNING_KEY` with the new `release.pem`. Remove the old key from both files in a pull request, and release the
@@ -255,7 +255,7 @@ anything.
 None of this is done yet. In order (the org secret is shared by both repositories):
 
 1. **The key.** On a PC you trust: `python -I scripts/release.py keygen <safe folder>`. Put the printed line in the launcher's
-   `Core/ReleaseTrust.cs` and in Longshot's `scripts/release_keys.json` (a pull request to each). Keep `release.pem` backed
+   `Core/ReleaseTrust.cs` and in Hookshot's `scripts/release_keys.json` (a pull request to each). Keep `release.pem` backed
    up offline. Losing it means a launcher with a new key that every player downloads by hand.
 2. **The secret** (MagicBeanDev > *Settings* > *Actions* > *Secrets*): `RELEASE_SIGNING_KEY`, the text of `release.pem`.
    No token secret and no bot account: `release.yml` makes the release with the job's own token (`forgejo.token`, given
@@ -271,16 +271,16 @@ None of this is done yet. In order (the org secret is shared by both repositorie
    check the AppImage's size after the first build), and `[repository.release] ALLOWED_TYPES` empty, so `.AppImage`, `.exe`,
    `.lock` and `SHA256SUMS` are accepted.
 5. **Actions and runners.** Enable Actions on both repositories (*Settings* > *Units*), and register the runners in
-   [docs/forgejo-runners.md](https://git.magicbean.dev/MagicBeanDev/Longshot/src/branch/main/docs/forgejo-runners.md)
-   (Linux only, for both: Longshot's Windows files are cross-built on Linux).
+   [docs/forgejo-runners.md](https://git.magicbean.dev/MagicBeanDev/Hookshot/src/branch/main/docs/forgejo-runners.md)
+   (Linux only, for both: Hookshot's Windows files are cross-built on Linux).
 6. **The tools' packages and `tools.lock`.** Done (2026-11-13): `cpm` with dav1d and `third-party` assembled and added,
    llvm-mingw, python, emsdk and wgpu-native mirrored, the Linux tools added, each a generic package of the organization
    (docs/releases.md, "tools.lock"). The play profile is optional and there is none yet (`tools.py assemble profile`,
    then `add`, when there is). `python -I scripts/tools.py check --require` must pass: `release.yml` stops in its first
    job, before any build, until it does.
-7. **Try it** on a fork, or with a throwaway key first: `LONGSHOT_LAUNCHER_TRUST=<test .pub.pem>` makes a launcher accept a
+7. **Try it** on a fork, or with a throwaway key first: `HOOKSHOT_LAUNCHER_TRUST=<test .pub.pem>` makes a launcher accept a
    release signed with it.
-8. **The first releases.** The launcher `v1.0.0-rc.1` and Longshot `v3.0.0-rc.1`, then their stables.
+8. **The first releases.** The launcher `v1.0.0-rc.1` and Hookshot `v3.0.0-rc.1`, then their stables.
 
 ## Troubleshooting
 
@@ -292,7 +292,7 @@ None of this is done yet. In order (the org secret is shared by both repositorie
 | *Publish* fails with HTTP 400/422 on an upload | the attachment size or type limits | One-time setup, step 4 |
 | *Publish* fails with HTTP 401/403 | the job's token is read-only: the run is not a push to this repository (a pull request from a fork, or another repository's workflow) | release from a push or a tag here only |
 | "is already published" | a run for a version that is out (a re-run of an old run) | nothing: a version's files never change |
-| *The version* fails: "tools.lock is missing: …" or "not in Longshot's store …" | `tools.lock` lacks a tool a builder needs, or names a package file that was not uploaded | Bump a tool (`tools.py add` or `mirror`) |
+| *The version* fails: "tools.lock is missing: …" or "not in Hookshot's store …" | `tools.lock` lacks a tool a builder needs, or names a package file that was not uploaded | Bump a tool (`tools.py add` or `mirror`) |
 | A draft is left after a failed run | the run stopped before *Publish* | re-run it (the draft is reused), or delete the draft |
 | The launcher: "not signed by a key this launcher trusts" | a release signed with a key the launcher does not have (a new key, or a test key) | release the launcher with the key first (Rotate the key) |
 | The launcher offers nothing on a channel | no published release on it, or its newest was refused (the home says why) | `release.py channels`, then check that release's files |

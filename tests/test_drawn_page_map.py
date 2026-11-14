@@ -35,7 +35,7 @@ from pathlib import Path
 RUN_ALL_ARGS = ["--cxx", "{cxx}"]
 
 ROOT = Path(__file__).resolve().parents[1]
-ENV_ON_H = ROOT / "gpu" / "vk" / "compat" / "longshot_env.h"
+ENV_ON_H = ROOT / "gpu" / "vk" / "compat" / "hookshot_env.h"
 SWITCH = "RX_VK_NO_DRAWN_PAGE_MAP"
 
 # The reasons texture_written is given, each by one writer: the file it is in, and where that writer's lock is. With a

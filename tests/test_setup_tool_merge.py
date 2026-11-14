@@ -1,5 +1,5 @@
 """The Windows setup (builder/setup/setup.c) installs tools.lock's third-party tool into the builder's own
-LongshotBuilder/tools/third_party: the release zip has that folder already (the repository's third_party sources,
+HookshotBuilder/tools/third_party: the release zip has that folder already (the repository's third_party sources,
 scripts/builder_package.py), and the tool's archive holds only the prebuilt files that go among them (a64emit.dll,
 SDL3.dll, ..., scripts/tools.py assemble third-party). The tool's files are merged in, file by file; a file both have is
 refused and never replaced; an installed version's third_party (sources and tool together) is never moved or copied onto
@@ -189,7 +189,7 @@ static int run(int argc, wchar_t **argv) {
         Part part;
         memset(&part, 0, sizeof part);
         wcstombs(part.sha, argv[5], sizeof part.sha - 1);
-        strcpy(part.dest, "LongshotBuilder/tools/third_party"), strcpy(part.from, "third_party");
+        strcpy(part.dest, "HookshotBuilder/tools/third_party"), strcpy(part.from, "third_party");
         strcpy(part.url, "https://invalid.example/third-party.zip");
         g_home.portable = _wtoi(argv[4]);
         return reuse_part(argv[2], "v-new", &part, argv[3]) == _wtoi(argv[6]) ? 0 : 22;
@@ -245,7 +245,7 @@ def main():
     package = module("builder_package_under_test", ROOT / "scripts/builder_package.py")
     tools = module("tools_under_test", ROOT / "scripts/tools.py")
     third = tools.named(tools.load(), "third-party")
-    assert third.dest == "LongshotBuilder/tools/third_party" and third.prefix == "third_party", third.line()
+    assert third.dest == "HookshotBuilder/tools/third_party" and third.prefix == "third_party", third.line()
     with tempfile.TemporaryDirectory(prefix="setup-tool-merge-") as folder:
         root = Path(folder)
         c, exe = root / "merge.c", root / "merge.exe"
@@ -263,7 +263,7 @@ def main():
                    "third_party/a64-kit/lift/build_emit.py": b"# builds a64emit.dll\n",
                    "third_party/sdl2/PROVENANCE.md": b"SDL2 and SDL3, prebuilt\n",
                    "third_party/zbic/zbic.c": b"/* zbic */\n"}
-        for rel, data in {"LongshotBuilder.exe": b"MZ builder", **{"tools/" + k: v for k, v in sources.items()}}.items():
+        for rel, data in {"HookshotBuilder.exe": b"MZ builder", **{"tools/" + k: v for k, v in sources.items()}}.items():
             (pkg / rel).parent.mkdir(parents=True, exist_ok=True)
             (pkg / rel).write_bytes(data)
         (root / "setup.exe").write_bytes(b"MZ setup")
@@ -281,7 +281,7 @@ def main():
         # 1. a fresh install: the builder zip unpacked into the staged version, then the tool merged into its third_party
         staged = root / "versions/v-new.part"
         unpack(root / "builder.zip", staged)
-        dest = staged / "LongshotBuilder/tools/third_party"
+        dest = staged / "HookshotBuilder/tools/third_party"
         assert dest.is_dir(), "the builder zip has no tools/third_party: this test's premise is gone"
         unpack(root / "third-party.zip", staged / ".tool-0")
         run("place", staged / ".tool-0/third_party", dest, 1)
@@ -310,14 +310,14 @@ def main():
         # 3. a dest the builder zip lacks: the tool's folder moved whole, as before
         other = root / "other.part"
         unpack(root / "third-party.zip", other / ".tool-1")
-        (other / "LongshotBuilder/tools").mkdir(parents=True)   # (the setup's mkdirs of dest's parent)
-        run("place", other / ".tool-1/third_party", other / "LongshotBuilder/tools/third_party", 1)
-        assert tree(other / "LongshotBuilder/tools/third_party") == prebuilt
+        (other / "HookshotBuilder/tools").mkdir(parents=True)   # (the setup's mkdirs of dest's parent)
+        run("place", other / ".tool-1/third_party", other / "HookshotBuilder/tools/third_party", 1)
+        assert tree(other / "HookshotBuilder/tools/third_party") == prebuilt
 
         # 4. an update: the installed version (v-old) lists the tool's SHA-256, and its third_party holds its sources too.
         # Never moved or copied onto the new version's own third_party, portable or not, and the new one is kept whole
         versions = root / "versions"
-        old = versions / "v-old/LongshotBuilder/tools/third_party"
+        old = versions / "v-old/HookshotBuilder/tools/third_party"
         (old / "a64-kit/lift").mkdir(parents=True)
         (old / "a64-kit/lift/a64emit.cpp").write_bytes(b"// v-old's source\n")
         (old / "a64-kit/lift/a64emit.dll").write_bytes(b"MZ a64emit")
@@ -333,7 +333,7 @@ def main():
         bare = versions / "v-bare.part"
         bare.mkdir()
         run("reuse", versions, bare, 1, third.sha256, 1)
-        assert (bare / "LongshotBuilder/tools/third_party/a64-kit/lift/a64emit.dll").read_bytes() == b"MZ a64emit"
+        assert (bare / "HookshotBuilder/tools/third_party/a64-kit/lift/a64emit.dll").read_bytes() == b"MZ a64emit"
     print("setup tool merge: the third-party tool merged into the builder zip's third_party; clashes, links and a reused "
           "folder refused; a fresh dest moved whole")
 

@@ -13,7 +13,7 @@ const curationPath = path.resolve('progress-curation.json');
 export async function collectFeed({ fetcher = fetch, token = '', curation = {}, now = Date.now(), maxPages = 100, wait } = {}) {
   validateCuration(curation);
   const closedSince = new Date(now - 90 * 86400000).toISOString();
-  const headers = { Accept: 'application/json', 'User-Agent': 'Longshot-docs-progress' };
+  const headers = { Accept: 'application/json', 'User-Agent': 'Hookshot-docs-progress' };
   if (token) headers.Authorization = `Bearer ${token}`;
   const request = (url, allowNotFound = false) => progressRequest(url, { fetcher, headers, allowNotFound, wait });
   const { data: repository } = await request(API);

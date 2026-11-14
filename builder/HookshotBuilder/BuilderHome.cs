@@ -2,20 +2,20 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace LongshotBuilder;
+namespace HookshotBuilder;
 
 /// One home for the setup, app and their children. Portable homes are explicitly marked, never inferred from cwd.
 static class BuilderHome
 {
-    public const string Marker = ".longshot-portable";
-    public const string MarkerText = "Longshot Builder portable home v1";
-    const string RootVariable = "LONGSHOT_SETUP_BASE";
-    const string PortableVariable = "LONGSHOT_BUILDER_PORTABLE";
+    public const string Marker = ".hookshot-portable";
+    public const string MarkerText = "Hookshot Builder portable home v1";
+    const string RootVariable = "HOOKSHOT_SETUP_BASE";
+    const string PortableVariable = "HOOKSHOT_BUILDER_PORTABLE";
     internal readonly record struct Home(string Root, bool Portable);
 
     static readonly Lazy<Home> Current = new(() => Resolve(
         Environment.GetEnvironmentVariable(RootVariable), AppContext.BaseDirectory,
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LongshotBuilder"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HookshotBuilder"),
         Environment.GetEnvironmentVariable(PortableVariable) == "1"));
 
     public static string Base => Current.Value.Root;
@@ -34,7 +34,7 @@ static class BuilderHome
         if (portableRequested)
             throw new IOException("The portable Builder home was not passed to this process.");
 
-        // (the setup installs the builder as versions/<tag>/LongshotBuilder: its home is up to three folders above it)
+        // (the setup installs the builder as versions/<tag>/HookshotBuilder: its home is up to three folders above it)
         DirectoryInfo? directory = new(Path.GetFullPath(appDirectory));
         for (var depth = 0; depth <= 3 && directory != null; depth++, directory = directory.Parent)
             if (IsMarked(directory.FullName)) return new(Absolute(directory.FullName), true);

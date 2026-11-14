@@ -1,6 +1,6 @@
 ---
 name: request-testing
-description: Ask the team to test a Longshot pull request on hardware you don't have (another GPU maker, OS, Steam Deck, 8 GB card), follow who is testing it, and read the results they post on the PR. Use when the user asks for testing on other hardware, says a PR needs a tester, asks whether anyone tested it or what the testers found, or wants to withdraw a request.
+description: Ask the team to test a Hookshot pull request on hardware you don't have (another GPU maker, OS, Steam Deck, 8 GB card), follow who is testing it, and read the results they post on the PR. Use when the user asks for testing on other hardware, says a PR needs a tester, asks whether anyone tested it or what the testers found, or wants to withdraw a request.
 ---
 
 # Request testing
@@ -36,7 +36,7 @@ python -I scripts/test_requests.py request --pr 2711 --summary "Keep 8 GB cards 
   few minutes (the PR's title as the summary, no needs or notes: put what to test in the PR's description). Don't
   post a second one for the same PR; `list` shows it as asked by the relay. It closes when the label comes off or
   the PR is merged or closed.
-- **Approval:** a request can be claimed only when the PR's author may push to Longshot, or a maintainer has put
+- **Approval:** a request can be claimed only when the PR's author may push to Hookshot, or a maintainer has put
   the `testing wanted` label on the PR. Otherwise the script says so, and the Discord card shows "Waiting for a
   maintainer" until the label is added (the card opens by itself within a few minutes). Tell the user to ask a
   maintainer for the label; don't add it yourself unless the user is a maintainer and asks you to.
@@ -73,7 +73,7 @@ Needs: AMD RX 6000 or newer, Windows                (then the PR link, then the 
 🧪 T-7KQ2 claim: until 2026-11-12 16:40Z
 🧪 T-7KQ2 renew: until 2026-11-12 18:10Z
 🧪 T-7KQ2 release
-🧪 T-7KQ2 done pass: https://git.magicbean.dev/MagicBeanDev/Longshot/pulls/12#issuecomment-123
+🧪 T-7KQ2 done pass: https://git.magicbean.dev/MagicBeanDev/Hookshot/pulls/12#issuecomment-123
 🧪 T-7KQ2 cancel
 ```
 

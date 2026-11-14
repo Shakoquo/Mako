@@ -1,5 +1,5 @@
 """The Insert menu's text fields: a row whose value is typed (the first one is Custom output size, the Output resolution's
-size of the player's own, which before could only be set in longshot_options.ini).
+size of the player's own, which before could only be set in hookshot_options.ini).
 
 The menu's own functions are cut out of gpu/vk/vk_menu.cpp by their text and driven with key and text events as the host
 gives them (MkwVkHost.take_text): typing, the caret's keys, Backspace and Delete, the length limit, printable ASCII with
@@ -605,7 +605,7 @@ def main():
                      block(menu, "int restart_slot_of("), block(menu, "bool restart_changed("),
                      block(menu, "void restart_values("),
                      between(menu, "bool output_size_char(", "struct FieldRow {"),
-                     between(menu, "TextField* editing =", "// ---- (longshot) the Controls page:")])
+                     between(menu, "TextField* editing =", "// ---- (hookshot) the Controls page:")])
     host_cut = between(backend, "enum { TEXT_QUEUE", "static const MkwVkHost vk_host")
     focused = block(menu, "if (open_now.load() && editing) {")
     win = (ROOT / "host/display.c").read_text(encoding="utf-8")
@@ -647,7 +647,7 @@ def main():
         pass
     else:
         raise SystemExit("FAIL: test_api_append: misplaced host_take_text was accepted")
-    comment_version = re.search(r"/\* \(longshot, version (\d+)\) typed text", api)
+    comment_version = re.search(r"/\* \(hookshot, version (\d+)\) typed text", api)
     if not comment_version or int(comment_version.group(1)) != 22:
         raise SystemExit("FAIL: text API comment must name its introduction at version 22")
     print("PASS: test_api_append: members may follow screen_size or take_text; positional wiring still required")
@@ -673,7 +673,7 @@ def main():
     first = tick.index("if (open_now.load() && editing) {")
     if first > tick.index("} else if (open_now.load() && page == 5) {"):
         raise SystemExit("FAIL: menu_tick: a page's keys are read before the field's")
-    need(tick, r"edit_end\(false\);\s*// \(longshot: a text field being edited", "menu_tick: closing the menu does not end the edit")
+    need(tick, r"edit_end\(false\);\s*// \(hookshot: a text field being edited", "menu_tick: closing the menu does not end the edit")
     need(tick, r'!strcmp\(key, "TYPE"\)', "menu_tick: RX_VK_MENU_SCRIPT has no TYPE")
     need(tick, r"pad\(pad_paste\)", "menu_tick: a controller cannot paste")
     ui = (ROOT / "gpu/vk/vk_ui.h").read_text(encoding="utf-8")

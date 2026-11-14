@@ -134,7 +134,7 @@ export class ProgressBoard extends HTMLElement {
     const expanded = new Set([...root.querySelectorAll<HTMLDetailsElement>('details[open]')].map(d => d.dataset.group));
     root.replaceChildren();
     if (!watch.stable || !watch.version) {
-      root.append(element('p', watch.stable ? 'The stable release has no exact version number to match. Browse reports below.' : 'No stable Longshot release is published in this snapshot. Browse reports and proposed changes below.'));
+      root.append(element('p', watch.stable ? 'The stable release has no exact version number to match. Browse reports below.' : 'No stable Hookshot release is published in this snapshot. Browse reports and proposed changes below.'));
       return;
     }
     const heading = element('p');

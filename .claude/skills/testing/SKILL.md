@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Test Longshot pull requests for the team on this PC's hardware - find open test requests in #test-requests:magicbean.dev that match this machine, claim one, build and test the PR, post the results on the PR and mark the request done. Use when the user asks to help test, pick up a test request, test someone's PR on their hardware, or when the testing loop fires.
+description: Test Hookshot pull requests for the team on this PC's hardware - find open test requests in #test-requests:magicbean.dev that match this machine, claim one, build and test the PR, post the results on the PR and mark the request done. Use when the user asks to help test, pick up a test request, test someone's PR on their hardware, or when the testing loop fires.
 ---
 
 # Testing for the team
@@ -16,7 +16,7 @@ tester's result (✅). Several people can test the same request. Everything goes
 
 Find the GPU, its VRAM, the driver and the OS once per session: Linux `vulkaninfo --summary` (or `lspci | grep -i vga`
 and `nvidia-smi`), Windows `Get-CimInstance Win32_VideoController` in PowerShell; a Steam Deck says so in
-`/etc/os-release`. The game's own `longshot_log.txt` also prints the device at start.
+`/etc/os-release`. The game's own `hookshot_log.txt` also prints the device at start.
 
 ## 2. Find a request
 
@@ -60,7 +60,7 @@ the claim and tell the user.
 
 1. Get the PR's head in its own folder, not on top of the user's work: `python -I scripts/forge.py pr checkout <pr>`
    (it fetches the head as the branch, or jj bookmark, `pr/<pr>`), then `git worktree add --detach
-   ../Longshot-test-<pr> pr/<pr>`. Note the commit you built.
+   ../Hookshot-test-<pr> pr/<pr>`. Note the commit you built.
 2. Build and run as in [docs/development.md](../../../docs/development.md) (*Use*, *Building*, *Running a test*). If
    the notes compare against main, build main the same way and run both under the same conditions, swapping the
    order once.
@@ -86,18 +86,18 @@ Result: ... (numbers in a small table when comparing; the log lines that matter;
 
 - Facts only: what was run, on what, what came out. A failure says how to reproduce it.
 - [CONTRIBUTING.md](../../../CONTRIBUTING.md) applies: **no game files or anything made from them** attached or
-  pasted (screenshots and lines of `longshot_log.txt` are fine), no local paths, user names or anything personal.
+  pasted (screenshots and lines of `hookshot_log.txt` are fine), no local paths, user names or anything personal.
 - Screenshots go up with the comment: `--attach <file> ...`, shown where the text has
   `![main @ <commit>](attach:<file>)` or at the end ([docs/forge.md](../../../docs/forge.md#pictures-in-a-comment)).
 
 Then mark it done with that comment's link (the URL `forge.py pr comment` prints):
 
 ```
-python -I scripts/test_requests.py done T-XXXX --result pass --comment https://git.magicbean.dev/MagicBeanDev/Longshot/pulls/<pr>#issuecomment-<n>
+python -I scripts/test_requests.py done T-XXXX --result pass --comment https://git.magicbean.dev/MagicBeanDev/Hookshot/pulls/<pr>#issuecomment-<n>
 ```
 
 `--result` is `pass`, `fail` or `mixed`. The script checks the link is a comment on the request's PR. Discord then
-shows ✅ with the result and the link. Remove the test folder: `git worktree remove ../Longshot-test-<pr>`.
+shows ✅ with the result and the link. Remove the test folder: `git worktree remove ../Hookshot-test-<pr>`.
 
 ## The testing loop
 

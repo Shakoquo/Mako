@@ -17,7 +17,7 @@
 #                     'continuous' one, at packing time, fails whenever GitHub answers 504)
 # The build tools (tools.lock's linux-x64 lines, each <name>/ here packed as tools/<name>.zip):
 #   emsdk/upstream/   LLVM's clang and lld (the layout third_party/a64-kit/tools/toolchain.py finds through EMSDK):
-#                     the player's PC compiles the game with them. The play profile (work/longshot_pieces.prof) wants
+#                     the player's PC compiles the game with them. The play profile (work/hookshot_pieces.prof) wants
 #                     LLVM 23 or newer.
 #   ffmpeg/           FFmpeg's libavcodec, libswscale, libswresample, libavutil, static and LGPL, with dav1d for OoT's
 #                     AV1 movies (VP8 / VP9 too) - linked into the game
@@ -264,13 +264,13 @@ if [ "$WHAT" = tools ]; then
     done
     # (the lines that publish them as package versions and write tools.lock: RELEASING.md, "Bump a tool")
     {
-        echo "# scripts/linux/deps.sh tools: each archive into Longshot's packages and tools.lock (RELEASE_TOKEN: your token)"
+        echo "# scripts/linux/deps.sh tools: each archive into Hookshot's packages and tools.lock (RELEASE_TOKEN: your token)"
         add() { echo "python3 -I scripts/tools.py add $1 $2 \"${OUT#"$PWD/"}/$1.zip\" --system linux-x64 --dest $3 --prefix $1"; }
-        add emsdk "$LLVM_VER" usr/lib/longshot/emsdk
-        add ffmpeg "$FFMPEG_VER-dav1d-$DAV1D_VER" usr/lib/longshot/ffmpeg
-        add sdl2 "$SDL_VER" usr/lib/longshot/sdl2
-        add sysroot "ubuntu22.04-gcc$GV-$(date -u +%Y%m%d)" usr/lib/longshot/sysroot
-        add cpm "$VK_HEADERS-$SPIRV_HEADERS-$VMA" usr/share/longshot/cpm
+        add emsdk "$LLVM_VER" usr/lib/hookshot/emsdk
+        add ffmpeg "$FFMPEG_VER-dav1d-$DAV1D_VER" usr/lib/hookshot/ffmpeg
+        add sdl2 "$SDL_VER" usr/lib/hookshot/sdl2
+        add sysroot "ubuntu22.04-gcc$GV-$(date -u +%Y%m%d)" usr/lib/hookshot/sysroot
+        add cpm "$VK_HEADERS-$SPIRV_HEADERS-$VMA" usr/share/hookshot/cpm
     } > "$OUT/add.sh"
     cat "$OUT/add.sh"
 fi

@@ -107,7 +107,7 @@ def main():
         cpp, exe = tmp / "t.cpp", tmp / "t.exe"
         lam = lam.replace("getenv(", "fake_getenv(").replace("env_on(", "fake_env_on(")
         cpp.write_text(FIXTURE.replace("@@DECISION@@", "(" + lam + ")"), encoding="utf-8")
-        r = subprocess.run([args.cxx, "-std=c++20", "-include", str(VK / "compat" / "longshot_env.h"), "-Wall",
+        r = subprocess.run([args.cxx, "-std=c++20", "-include", str(VK / "compat" / "hookshot_env.h"), "-Wall",
                             "-Wextra", "-Werror", str(cpp), "-o", str(exe)], capture_output=True, text=True, timeout=120)
         if r.returncode:
             print(r.stdout + r.stderr)

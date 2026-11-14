@@ -1,13 +1,13 @@
 # Forgejo Actions runners
 
-Longshot's CI runs on Forgejo Actions (`.forgejo/workflows/`), on runners the team registers with git.magicbean.dev. Every
+Hookshot's CI runs on Forgejo Actions (`.forgejo/workflows/`), on runners the team registers with git.magicbean.dev. Every
 job runs on Linux: **no Windows runner is needed**, and none is registered. These are manual steps for an admin of the
 instance or of MagicBeanDev; nothing here needs a game.
 
 ## Turn Actions on
 
-Repository *Settings > Units > Actions* (or the API's `has_actions`), on MagicBeanDev/Longshot and
-MagicBeanDev/LongshotLauncher. The secrets and the variable the release workflows read are in [RELEASING.md](../RELEASING.md), *One-time setup*.
+Repository *Settings > Units > Actions* (or the API's `has_actions`), on MagicBeanDev/Hookshot and
+MagicBeanDev/HookshotLauncher. The secrets and the variable the release workflows read are in [RELEASING.md](../RELEASING.md), *One-time setup*.
 
 ## The labels the workflows ask for
 

@@ -61,7 +61,7 @@ bool model_shown(bool available) { return available; }
     for name in ("bool cheats_on(", "bool row_shown(", "int tab_row_count(", "int tab_row_to_global(",
                  "int menu_damage_taken("):
         source += block(menu, name) + '\n'
-    source += menu[menu.index("struct DebugGroup {"):menu.index("/// (longshot) The Debug tab's rows from top down")]
+    source += menu[menu.index("struct DebugGroup {"):menu.index("/// (hookshot) The Debug tab's rows from top down")]
     source += r'''
 int main() {
     int order[64], dev, heading;

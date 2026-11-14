@@ -1,5 +1,5 @@
-"""Releases on git.magicbean.dev (docs/releases.md, RELEASING.md), for both products: Longshot (its builders, released from
-MagicBeanDev/Longshot) and the Longshot Launcher (MagicBeanDev/LongshotLauncher). The same file is in both repositories; it
+"""Releases on git.magicbean.dev (docs/releases.md, RELEASING.md), for both products: Hookshot (its builders, released from
+MagicBeanDev/Hookshot) and the Hookshot Launcher (MagicBeanDev/HookshotLauncher). The same file is in both repositories; it
 finds out which one it is in. Python's standard library, git, and the openssl command line (for keys and signatures) only.
 
 A release is a Forgejo release of the repository: a tag, a page with the notes, and the product's files, with SHA256SUMS (each
@@ -28,7 +28,7 @@ Files and signatures:
         the signature, by the key given or a key the launcher trusts (trusted_keys); with --files, every file's SHA-256 too
     python -I scripts/release.py keygen <out folder>
         a new ECDSA P-256 key pair, release.pem (private: keep it out of every repository) and release.pub.pem, and the lines
-        for the launcher's Core/ReleaseTrust.cs and Longshot's scripts/release_keys.json
+        for the launcher's Core/ReleaseTrust.cs and Hookshot's scripts/release_keys.json
     python -I scripts/release.py key-id <.pem>
 
 The release on Forgejo ($RELEASE_TOKEN: in CI the job's own token, forgejo.token; $GITHUB_REPOSITORY or the repository
@@ -36,8 +36,8 @@ this is; $FORGEJO_API, $FORGEJO_UPLOAD_API):
     python -I scripts/release.py publish <tag> --target <commit> --notes <file> <file>...
         a draft release (pre-release unless a stable), every file uploaded and checked, then published: until that last step
         no launcher sees it. A draft left by a failed run of the same tag is reused. The page is the notes under a header
-        (release_page): the launcher's, big download links to its own files; Longshot's, "to play, get the Longshot
-        Launcher", with longshot.magicbean.dev's links to the newest launcher of the same channel
+        (release_page): the launcher's, big download links to its own files; Hookshot's, "to play, get the Hookshot
+        Launcher", with hookshot.magicbean.dev's links to the newest launcher of the same channel
     python -I scripts/release.py prune [--keep 5]
         the nightly releases and their tags past the newest <keep>; nothing else is ever deleted
     python -I scripts/release.py released-as <commit> [--not <tag>]
@@ -63,12 +63,12 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SERVER = "https://git.magicbean.dev"
-# (each product: its repository, its first version's major number, and the commit its nightlies count from: Longshot from the
-# fork, e2a4d453 "Rename the project to Longshot"; the launcher from its repository's first commit)
+# (each product: its repository, its first version's major number, and the commit its nightlies count from: Hookshot from the
+# fork, e2a4d453 "Rename the project to Hookshot"; the launcher from its repository's first commit)
 PRODUCTS = {
-    "longshot": {"repo": "MagicBeanDev/Longshot", "first_major": 3, "display": "Longshot",
+    "hookshot": {"repo": "MagicBeanDev/Hookshot", "first_major": 3, "display": "Hookshot",
                  "since": "e2a4d45398ffba162f54026bb7e708a7157bbed9"},
-    "launcher": {"repo": "MagicBeanDev/LongshotLauncher", "first_major": 1, "display": "Longshot Launcher", "since": None},
+    "launcher": {"repo": "MagicBeanDev/HookshotLauncher", "first_major": 1, "display": "Hookshot Launcher", "since": None},
 }
 CHANNELS = ("stable", "rc", "nightly")
 # (git-cliff for the notes, Linux x86-64, pinned: its release page gives the SHA-256)
@@ -90,8 +90,8 @@ def fail(message):
 
 
 def product_of(root=ROOT):
-    """launcher in the launcher's repository (it has Core/ReleaseTrust.cs), else longshot"""
-    return "launcher" if os.path.isfile(os.path.join(root, "Core", "ReleaseTrust.cs")) else "longshot"
+    """launcher in the launcher's repository (it has Core/ReleaseTrust.cs), else hookshot"""
+    return "launcher" if os.path.isfile(os.path.join(root, "Core", "ReleaseTrust.cs")) else "hookshot"
 
 
 # ---- versions ----
@@ -243,7 +243,7 @@ def previous_tag(tag, first_major, root=ROOT):
 
 def notes(tag, product, root=ROOT):
     """git-cliff's notes for tag (cliff.toml), the commits since the previous tag of the product's numbers (the first:
-    since the product's first commit, for Longshot the fork)"""
+    since the product's first commit, for Hookshot the fork)"""
     first = PRODUCTS[product]["first_major"]
     since = previous_tag(tag, first, root) or PRODUCTS[product]["since"]
     ref = "HEAD" if NIGHTLY.match(tag) or git("rev-parse", "-q", "--verify", "refs/tags/" + tag, root=root, check=False) is None else tag
@@ -262,28 +262,28 @@ def notes(tag, product, root=ROOT):
 
 # ---- the release page ----
 
-# (longshot.magicbean.dev's permanent download links, the Longshot website, website/ in MagicBeanDev/Longshot: /download/launcher/<channel>[/<os>] goes to that channel's
+# (hookshot.magicbean.dev's permanent download links, the Hookshot website, website/ in MagicBeanDev/Hookshot: /download/launcher/<channel>[/<os>] goes to that channel's
 # newest launcher, by the rules of newest() above)
-SITE = "https://longshot.magicbean.dev"
+SITE = "https://hookshot.magicbean.dev"
 # (the same release files from Cloudflare's edge: git-cdn serves git.magicbean.dev's release paths from its R2 store, cached)
 CDN = "https://git-cdn.magicbean.dev"
 LAUNCHER_FILES = {"setup": "-windows-x64-setup.exe", "portable": "-windows-x64-portable.zip", "appimage": "-x86_64.AppImage"}
-CHANNEL_SAYS = {"stable": "This is a stable release: it builds Longshot's stable versions by default.",
-                "rc": "This is a release candidate: it builds Longshot's rc versions by default.",
-                "nightly": "This is a nightly, untested: it builds Longshot's nightlies by default."}
+CHANNEL_SAYS = {"stable": "This is a stable release: it builds Hookshot's stable versions by default.",
+                "rc": "This is a release candidate: it builds Hookshot's rc versions by default.",
+                "nightly": "This is a nightly, untested: it builds Hookshot's nightlies by default."}
 
 
 def page_header(tag, product, names, repo=None):
     """The top of a release's page, above git-cliff's notes: big heading links that look like buttons, no tables. The
-    launcher's: this release's own files. Longshot's: "to play, get the Longshot Launcher", with longshot.magicbean.dev's links to
+    launcher's: this release's own files. Hookshot's: "to play, get the Hookshot Launcher", with hookshot.magicbean.dev's links to
     the newest launcher of the same channel (rc to rc, nightly to nightly, stable to stable), and "don't download the files
     below" (above the builder files)"""
     channel = channel_of(tag, PRODUCTS[product]["first_major"]) or "nightly"
     if product == "launcher":
         base = "%s/%s/releases/download/%s/" % (CDN, repo or repo_of(product), urllib.parse.quote(tag))
         url = {k: base + urllib.parse.quote(n) for k, suffix in LAUNCHER_FILES.items() for n in sorted(names)
-               if n.startswith("LongshotLauncher-") and n.endswith(suffix)}
-        lines = ["# ⬇️ Download Longshot Launcher", ""]
+               if n.startswith("HookshotLauncher-") and n.endswith(suffix)}
+        lines = ["# ⬇️ Download Hookshot Launcher", ""]
         if "setup" in url:
             lines += ["### [🪟 &nbsp;Download for Windows](%s)" % url["setup"], ""]
         if "appimage" in url:
@@ -292,10 +292,10 @@ def page_header(tag, product, names, repo=None):
             lines += ["Windows without installing: [portable zip](%s)" % url["portable"], ""]
         return "\n".join(lines + [
             "Run it, point it at your own dump of the game (a `.nup`, or its romfs and exefs folders), and press **Build**. "
-            "It installs Longshot and keeps it and itself up to date. %s" % CHANNEL_SAYS[channel], "", "---", ""])
+            "It installs Hookshot and keeps it and itself up to date. %s" % CHANNEL_SAYS[channel], "", "---", ""])
     link = "%s/download/launcher/%s" % (SITE, channel)
     return "\n".join([
-        "# 🎮 To play, get the Longshot Launcher", "",
+        "# 🎮 To play, get the Hookshot Launcher", "",
         "### [🪟 &nbsp;Download the launcher for Windows](%s/windows)" % link, "",
         "### [🐧 &nbsp;Download the launcher for Linux (AppImage)](%s/linux)" % link, "",
         "Windows without installing: [portable zip](%s/windows-portable) · [the launcher's newest %s release](%s)"
@@ -316,7 +316,7 @@ def fetch_git_cliff(folder):
     exe = os.path.join(folder, "git-cliff-%s" % version, "git-cliff")
     if os.path.isfile(exe):
         return exe
-    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "longshot-release"}), timeout=120) as r:
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "hookshot-release"}), timeout=120) as r:
         data = r.read()
     if hashlib.sha256(data).hexdigest() != want:
         fail("%s: not the SHA-256 GIT_CLIFF names" % url)
@@ -382,7 +382,7 @@ def keys_from_cs(text):
 
 
 def trusted_keys(root=ROOT):
-    """The keys the launcher is built with: Core/ReleaseTrust.cs in the launcher's repository; in Longshot's,
+    """The keys the launcher is built with: Core/ReleaseTrust.cs in the launcher's repository; in Hookshot's,
     scripts/release_keys.json ({"keys": ["<base64 SubjectPublicKeyInfo>"]}), which must list the same keys"""
     cs = os.path.join(root, "Core", "ReleaseTrust.cs")
     if os.path.isfile(cs):
@@ -443,7 +443,7 @@ def repo_of(product):
 
 def api(method, path, body=None, data=None, content_type=None, upload=False, missing_ok=False):
     base = (os.environ.get("FORGEJO_UPLOAD_API") if upload else None) or os.environ.get("FORGEJO_API") or SERVER + "/api/v1"
-    headers = {"User-Agent": "longshot-release", "Accept": "application/json"}
+    headers = {"User-Agent": "hookshot-release", "Accept": "application/json"}
     token = os.environ.get("RELEASE_TOKEN")
     if token:
         headers["Authorization"] = "token " + token
@@ -478,7 +478,7 @@ def releases(repo, pages=1000):
 
 
 def multipart(name, data):
-    boundary = "longshot%s" % hashlib.sha256(data[:4096] + name.encode()).hexdigest()[:24]
+    boundary = "hookshot%s" % hashlib.sha256(data[:4096] + name.encode()).hexdigest()[:24]
     head = ('--%s\r\nContent-Disposition: form-data; name="attachment"; filename="%s"\r\n'
             'Content-Type: application/octet-stream\r\n\r\n' % (boundary, name)).encode()
     return head + data + ("\r\n--%s--\r\n" % boundary).encode(), "multipart/form-data; boundary=" + boundary
@@ -539,7 +539,7 @@ def download(url, limit=1 << 20):
     if up:
         u, base = urllib.parse.urlsplit(url), urllib.parse.urlsplit(up)
         url = urllib.parse.urlunsplit((base.scheme, base.netloc, u.path, u.query, ""))
-    headers = {"User-Agent": "longshot-release"}
+    headers = {"User-Agent": "hookshot-release"}
     if os.environ.get("RELEASE_TOKEN"):
         headers["Authorization"] = "token " + os.environ["RELEASE_TOKEN"]
     try:
@@ -727,7 +727,7 @@ def main(argv=None):
         b64 = base64.b64encode(spki).decode()
         print("%s (private: the RELEASE_SIGNING_KEY secret, and a safe copy offline) and %s; key id %s" % (private, public, key_id(spki)))
         print("for the launcher's Core/ReleaseTrust.cs, ReleaseKeys.BuiltIn:\n    ReleaseKey.FromSpki(\"%s\")," % b64)
-        print("for Longshot's scripts/release_keys.json, \"keys\":\n    \"%s\"" % b64)
+        print("for Hookshot's scripts/release_keys.json, \"keys\":\n    \"%s\"" % b64)
     elif a.cmd == "key-id":
         spki = spki_der(a.pem)
         print("%s %s" % (key_id(spki), base64.b64encode(spki).decode()))

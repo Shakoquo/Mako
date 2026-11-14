@@ -72,7 +72,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cc", default=shutil.which("gcc") or "clang")
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="longshot-report-run-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="hookshot-report-run-") as tmp:
         src, exe = Path(tmp) / "run.c", Path(tmp) / "run.exe"
         src.write_text(FIXTURE, encoding="utf-8")
         cmd = [args.cc, "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror", "-I", str(ROOT / "host"),

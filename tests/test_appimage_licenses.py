@@ -1,4 +1,4 @@
-"""The AppImage carries the licences of the third-party parts compiled into longshot_vk.so: Dear ImGui (MIT), zstd (BSD), the
+"""The AppImage carries the licences of the third-party parts compiled into hookshot_vk.so: Dear ImGui (MIT), zstd (BSD), the
 Libertinus fonts (OFL) and, in a build with AMD FSR 4, AMD's FSR API headers (MIT), each with its PROVENANCE.md. Runs the real copy block of scripts/linux/appimage.sh into a temporary
 folder; nothing is built.
 
@@ -29,9 +29,9 @@ class AppImageLicences(unittest.TestCase):
     @unittest.skipUnless(sys.platform.startswith("linux"), "the AppImage is made on Linux")
     def test_copied(self):
         script = (ROOT / "scripts/linux/appimage.sh").read_text(encoding="utf-8")
-        start = script.index("# ---- the licences of the third-party parts compiled into longshot_vk.so")
+        start = script.index("# ---- the licences of the third-party parts compiled into hookshot_vk.so")
         end = script.index("# ---- end of the licences ----", start)
-        with tempfile.TemporaryDirectory(prefix="longshot-appimage-licences-") as folder:
+        with tempfile.TemporaryDirectory(prefix="hookshot-appimage-licences-") as folder:
             env = dict(os.environ, T=folder)
             result = subprocess.run(["bash", "-eu", "-o", "pipefail", "-c", script[start:end]], cwd=ROOT, env=env,
                                     capture_output=True, text=True)
@@ -63,7 +63,7 @@ class AppImageLicences(unittest.TestCase):
         build = (ROOT / "nx2/build.py").read_text(encoding="utf-8")
         self.assertIn('cp -a third_party/fidelityfx "$T/third_party/"', script)
         self.assertIn('FSR_HEADERS = os.path.join(kit.HERE, "..", "third_party", "fidelityfx")', build)
-        self.assertIn('return "" if NGX_SDK or FSR else os.environ.get("LONGSHOT_VK_PREBUILT", "")', build)
+        self.assertIn('return "" if NGX_SDK or FSR else os.environ.get("HOOKSHOT_VK_PREBUILT", "")', build)
         self.assertTrue((ROOT / "third_party/fidelityfx/api/include/ffx_api.h").is_file())
 
 

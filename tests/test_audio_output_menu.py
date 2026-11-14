@@ -36,7 +36,7 @@ bool host_screen_size(uint32_t*, uint32_t*) { return false; }
 
 using DWORD = unsigned long;
 constexpr int MAX_PATH = 260;
-static DWORD hos_game_path_a(char *path, DWORD size) { return snprintf(path, size, "./longshot.exe"); }
+static DWORD hos_game_path_a(char *path, DWORD size) { return snprintf(path, size, "./hookshot.exe"); }
 static char logged[256];
 static void hos_log(const char *format, ...) {
     va_list args;
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     for (int v = 0; v <= 3; v++) assert(hn_audio_output(v, -1) && hn_audio_output(v, 0) && !hn_audio_output(v, 1));
     if (strcmp(saved, "-")) {   /* (the lines as the menu's save writes them: the row's key, around others) */
         const Row row = {1, argv[1], &opts.audio_output};
-        FILE *f = fopen("longshot_options.ini", "w");
+        FILE *f = fopen("hookshot_options.ini", "w");
         assert(f);
         fprintf(f, "output_res=1\nmicrophone=1\noptions_version=3\n");
         if (strcmp(saved, "missing")) fprintf(f, "%s=%s\n", ini_key(row), saved);
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
 }
 """
 
-# (saved audio_output or "-" for no longshot_options.ini, HOS_AUDIO_CHANNELS or None, the default output's channels,
+# (saved audio_output or "-" for no hookshot_options.ini, HOS_AUDIO_CHANNELS or None, the default output's channels,
 #  the speakers the game is told, whether the device was asked, what the log says)
 CASES = (
     ("-", None, 6, 6, 1, "the default output has 6 channels"),
@@ -128,12 +128,12 @@ def main():
     tab, name, lo, hi, step, text, hint, restart, exempt = row.groups()
     assert (tab, lo, hi, step, text, hint, restart, exempt) == \
         ("AUDIO", "0", "3", "1", "tx_audio_output", "hn_audio_output", "true", "true"), row.groups()
-    host = between(audio, "/* (longshot) The Insert menu's Audio output", "/* The device's format,")
+    host = between(audio, "/* (hookshot) The Insert menu's Audio output", "/* The device's format,")
     hints = re.search(r'MENU_HINTS\(hn_audio_output,.*?\)\n(?=\S)', menu, re.S)
     assert hints, "no MENU_HINTS(hn_audio_output, ...)"
     menu_part = between(menu, "/// A row's hints from a table", "const char* tx_framegen(") + hints.group(0) + \
         between(menu, "const char* tx_audio_output(int v) {", "const char* tx_robust(") + \
-        between(menu, "const char* ini_key(const Row& r) {", "// (longshot) the controls, kept by the host")
+        between(menu, "const char* ini_key(const Row& r) {", "// (hookshot) the controls, kept by the host")
     menu_part += between(menu, "struct Out {", "/// The choice of size w x h:")
     menu_part += between(menu, "int row_restart_value(const Row& r) {", "void restart_init() {")
     assert "restart_state.add(row_restart_value(rows[i]))" in menu
@@ -144,7 +144,7 @@ def main():
         source.write_text(FIXTURE.replace("HOST", host).replace("MENU", menu_part), encoding="utf-8")
         subprocess.run([args.cxx, "-std=c++17", "-Wall", "-Wextra", "-Werror", "-I" + str(ROOT), str(source), "-o", str(exe)], check=True)
         for saved, env_channels, device, want, asked, log in CASES:
-            ini = work / "longshot_options.ini"
+            ini = work / "hookshot_options.ini"
             if ini.exists():
                 ini.unlink()
             env = os.environ.copy()

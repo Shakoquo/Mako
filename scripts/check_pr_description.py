@@ -14,7 +14,7 @@
     (or is left out when none does), and every box kept is ticked: a box there means it applies, so it is done.
 
 Warnings, which do not fail it: Flags and settings, a note on what the PR adds and the author's recommendation, never
-a gate (missing, empty or with the template's stand-ins; a row missing a cell; an RX_*, HOS_* or LONGSHOT_* name the
+a gate (missing, empty or with the template's stand-ins; a row missing a cell; an RX_*, HOS_* or HOOKSHOT_* name the
 diff adds that isn't listed; a change to the menu's code while it says None), a PR rebased onto a newer main than the
 one measured, an If applicable box marked n/a (delete it instead), a box the diff suggests that isn't there, Not tested or Needs other testers naming something the Measurements say was
 measured, and a test request still to open (forge.py pr ready refuses that one: the PR goes ready once they are open).
@@ -24,7 +24,7 @@ draft) is not checked: it passes with a notice listing what is left. The check a
 review; forge.py pr ready runs the same check before it takes the WIP: off.
 
     python -I scripts/check_pr_description.py --file body.md [--diff pr.diff] [--wip]
-    python -I scripts/check_pr_description.py --pr 12 [--repo MagicBeanDev/Longshot] [--server https://git.magicbean.dev]
+    python -I scripts/check_pr_description.py --pr 12 [--repo MagicBeanDev/Hookshot] [--server https://git.magicbean.dev]
 
 --pr reads the pull request and its diff from the Forgejo API, with the token in FORGEJO_TOKEN or GITHUB_TOKEN when one
 is set (a public repository needs none). Exit status 0 when it passes, 1 with the problems listed when it does not.
@@ -62,7 +62,7 @@ TAGGED = re.compile(r"^(?P<name>[A-Za-z][\w.]*)-(?:\d+-)?(?P<hash>[0-9a-f]{7,40}
 DELTA = re.compile(r"^(Δ|delta|diff|change)\b", re.I)
 # Switches the game, the build or a script reads: a quoted name added in the diff (docs/development.md, "Switches for
 # testing and debugging"). Menu rows and ini keys are not spotted that surely: a change to the menu's code is a warning.
-SWITCH = re.compile(r"[\"'`]((?:RX|HOS|LONGSHOT)_[A-Z0-9_]+)[\"'`]")
+SWITCH = re.compile(r"[\"'`]((?:RX|HOS|HOOKSHOT)_[A-Z0-9_]+)[\"'`]")
 MENU_CODE = ("gpu/vk/vk_menu.cpp",)
 
 
@@ -462,7 +462,7 @@ def is_draft(title, api_draft=False):
 
 def fetch(server, repo, number, suffix=""):
     req = urllib.request.Request("%s/api/v1/repos/%s/pulls/%d%s" % (server.rstrip("/"), repo, number, suffix),
-                                 headers={"Accept": "application/json", "User-Agent": "longshot-pr-check/1"})
+                                 headers={"Accept": "application/json", "User-Agent": "hookshot-pr-check/1"})
     token = os.environ.get("FORGEJO_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if token:
         req.add_header("Authorization", "token " + token)
@@ -479,7 +479,7 @@ def main(argv=None):
     p.add_argument("--diff", help="with --file: the PR's unified diff, for the Flags checks")
     p.add_argument("--wip", "--draft", dest="wip", action="store_true",
                    help="with --file: treat it as work in progress (not checked: a notice only)")
-    p.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY") or "MagicBeanDev/Longshot")
+    p.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY") or "MagicBeanDev/Hookshot")
     p.add_argument("--server", default=os.environ.get("GITHUB_SERVER_URL") or "https://git.magicbean.dev")
     a = p.parse_args(argv)
     merge_base, diff = None, None

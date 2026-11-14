@@ -405,7 +405,7 @@ def main():
             command = [args.cxx, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-I", include,
                        str(src), "-o", str(exe)]
         subprocess.run(command, cwd=tmp, check=True)
-        raise SystemExit(subprocess.run([str(exe), str(Path(tmp) / "longshot_options.ini")], cwd=tmp).returncode)
+        raise SystemExit(subprocess.run([str(exe), str(Path(tmp) / "hookshot_options.ini")], cwd=tmp).returncode)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { progressRequest } from '../src/lib/progress-request.ts';
 
-const url = 'https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Longshot/issues';
+const url = 'https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Hookshot/issues';
 const ok = () => new Response('{"ok":true}');
 
 test('transient HTTP failures back off, honor bounded Retry-After and use fresh timeout signals', async () => {
@@ -43,7 +43,7 @@ test('persistent transient failures stop after three attempts with endpoint diag
   await assert.rejects(progressRequest(url, { wait: async () => {}, fetcher: async () => {
     calls++;
     return new Response('not logged', { status: 503 });
-  } }), /\/Longshot\/issues, HTTP 503 \(attempt 3\/3\)/);
+  } }), /\/Hookshot\/issues, HTTP 503 \(attempt 3\/3\)/);
   assert.equal(calls, 3);
 });
 

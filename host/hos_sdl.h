@@ -30,7 +30,7 @@ uint32_t hos_sdl_mouse_buttons(void);   /* 1 left, 2 middle, 4 right */
 void hos_sdl_mouse_position(float *x, float *y);   /* main thread, window-coordinate units */
 void hos_sdl_window_size(void *window, int *width, int *height);   /* (in the units of the mouse's position, not pixels) */
 void hos_sdl_icon(void *window, const char *png);   /* (SDL 3.4's PNG loader: nothing on SDL2 or an older SDL3) */
-/* (longshot) typed text, for the Insert menu's text fields: text input on or off for the window (SDL_StartTextInput: text
+/* (hookshot) typed text, for the Insert menu's text fields: text input on or off for the window (SDL_StartTextInput: text
    events, an input method's window; SDL2 has it on from the start, SDL3 off), the clipboard's text (UTF-8, NULL when none;
    given back with hos_sdl_free) */
 void hos_sdl_text_input(void *window, int on);
@@ -61,7 +61,7 @@ int hos_sdl_poll_event(HosSdlEvent *e);
 int hos_sdl_audio_open(int freq, int channels, int s16, void (*pull)(void *user, uint8_t *out, int len), void *user);
 int hos_sdl_audio_channels(void);   /* the default output's channels (6 for 5.1); 2 when SDL cannot say */
 
-/* ---- (longshot) microphones: SDL3's recording devices or SDL2's capture devices, for the game's input streams
+/* ---- (hookshot) microphones: SDL3's recording devices or SDL2's capture devices, for the game's input streams
    (host/nn_audio_in.c). The device's sound comes out converted to the format asked for (SDL resamples and mixes the
    channels down) ---- */
 int hos_sdl_mic_list(uint32_t *ids, char (*names)[128], int max);   /* the recording devices now: their count */

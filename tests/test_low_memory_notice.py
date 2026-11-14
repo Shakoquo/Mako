@@ -37,7 +37,7 @@ FIXTURE = r"""
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "longshot_env.h"
+#include "hookshot_env.h"
 /* Preserve the real host's environment API before selecting a policy. No
    production condition is changed: _WIN32 selects its existing Windows path. */
 #ifdef _WIN32

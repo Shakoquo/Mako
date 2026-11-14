@@ -13,7 +13,7 @@ function formField(body, name) {
 }
 
 export function reportEvidence(body) {
-  const game = exactVersion(formField(body, 'Longshot version'));
+  const game = exactVersion(formField(body, 'Hookshot version'));
   const builderField = formField(body, 'Builder version');
   const installField = formField(body, 'Version');
   const builder = builderField && installField ? null : exactVersion(builderField || installField);
@@ -27,7 +27,7 @@ export function reportEvidence(body) {
     'Controls': 'Controls',
     'Sound, controls or saves': 'Sound, controls or saves',
   };
-  return { version, versionSource: version ? game ? 'Longshot version field' : installField ? 'Installation version field' : 'Builder version field' : null,
+  return { version, versionSource: version ? game ? 'Hookshot version field' : installField ? 'Installation version field' : 'Builder version field' : null,
     reportedArea: areas[kind] || (builder ? 'Setup' : 'Unspecified') };
 }
 

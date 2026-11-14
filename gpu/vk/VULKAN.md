@@ -1,15 +1,15 @@
-# The Vulkan back end (longshot_vk.dll)
+# The Vulkan back end (hookshot_vk.dll)
 
 > This is the back end's development log from mkw-recomp, kept for its reasons and not updated since. Names and
-> defaults have moved: the DLL is `longshot_vk.dll` (`longshot_vk.so` on Linux) and the default renderer, with
+> defaults have moved: the DLL is `hookshot_vk.dll` (`hookshot_vk.so` on Linux) and the default renderer, with
 > `RX_BACKEND` only to pick another; the image and upload code of `vk_image.cpp` and `vk_upload.cpp` is in
 > `vk_texture.cpp`; a draw whose pipeline is not ready waits with `RX_VK_PIPE_SKIP=0` (there is no `RX_VK_PIPE_WAIT`);
 > `RX_VK_DUMP` takes a present number and writes PNGs; `RX_VK_FRAMEGEN` only turns frame generation off (the Insert
 > menu turns it on); the texture budget `RX_VK_VRAM_MB` defaults to 70% of what the driver allows (at most 6 GB),
-> `RX_VK_TEX_MAX_MB` to 1536 and `RX_VK_MIRROR_MB` to a share of the card; and `eden/` carries Longshot's changes.
+> `RX_VK_TEX_MAX_MB` to 1536 and `RX_VK_MIRROR_MB` to a share of the card; and `eden/` carries Hookshot's changes.
 > The current switches are in [docs/development.md](../../docs/development.md#switches-for-testing-and-debugging).
 
-The game renders through `longshot_vk.dll` (`RX_BACKEND` unset or `vulkan`) instead of the WebGPU renderer in the executable
+The game renders through `hookshot_vk.dll` (`RX_BACKEND` unset or `vulkan`) instead of the WebGPU renderer in the executable
 (`gpu/render`). `host/rx_backend.c` owns the `rx_*` names the host calls. It loads the DLL, passes it the host
 functions (`vk_api.h` `MkwVkHost`) and routes the calls to the table the DLL returns (`MkwVkRenderer`). If the DLL
 or Vulkan is missing, the WebGPU renderer stays in place.
@@ -136,7 +136,7 @@ Designed after totk-pc-recomp's runtime/vk_*.c (MIT) and Eden's renderer_vulkan,
 - **Pipelines**: whatever Vulkan 1.3 and `VK_EXT_extended_dynamic_state3` take as dynamic is dynamic; graphics
   programs are translated and pipelines built on worker threads (`vk_jobs.cpp`). A draw whose program or pipeline
   is not ready is left out when its targets hold an earlier frame's picture and waits otherwise (TOTK's
-  `TOTK_PIPE_SKIP` rule; `RX_VK_PIPE_WAIT=1` always waits). The pipeline cache persists (`cache/longshot_vk_pipelines.bin` in the game folder).
+  `TOTK_PIPE_SKIP` rule; `RX_VK_PIPE_WAIT=1` always waits). The pipeline cache persists (`cache/hookshot_vk_pipelines.bin` in the game folder).
 - **Uniform updates** (`UPDATE_UB`) go to guest memory at the end of their recording; draws after one bind a copy
   of the range with it applied (`ub_overlay`).
 - **The VRAM mirror** (`vk_memory.cpp`, TOTK's): pools bound as buffers get a device-local copy at the next

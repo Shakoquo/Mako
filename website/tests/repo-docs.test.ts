@@ -22,7 +22,7 @@ test('installation hub retains source sections and links', () => {
 
 test('the launcher download buttons get a channel picker, hidden until a script runs it', async () => {
   const source = await readFile(new URL('../../docs/getting-started.md', import.meta.url), 'utf8');
-  const page = source.replace(/https:\/\/longshot\.magicbean\.dev\//g, '/');
+  const page = source.replace(/https:\/\/hookshot\.magicbean\.dev\//g, '/');
   const formatted = formatInstallHub(page);
   assert.equal((formatted.match(/data-launcher-channel /g) || []).length, 1);
   assert.match(formatted, /<div class="launcher-channel" role="radiogroup" aria-labelledby="launcher-channel-label" data-launcher-channel hidden>[\s\S]*<\/p>\n<\/div>\n<div class="download-buttons">/);

@@ -23,7 +23,7 @@ test('archived world-name shorthand stays neutral without changing the specific 
 test('activity exports neutralize title and search copy without altering source records or identifiers', () => {
   const item = { title: 'fix: OoT crashes in Kokiri Forest', originalTitle: 'fix: OoT crashes in Kokiri Forest',
     summary: 'Zelda on Nintendo Switch 2', workaround: 'Try outside Hyrule Field', labels: ['Ocarina of Time', 'Graphics'],
-    id: 'pull:12', url: 'https://git.magicbean.dev/MagicBeanDev/Longshot/pulls/12', report: { version: '3.0.0' } };
+    id: 'pull:12', url: 'https://git.magicbean.dev/MagicBeanDev/Hookshot/pulls/12', report: { version: '3.0.0' } };
   const result = publicProgressItem(item);
   for (const text of [result.title, result.originalTitle, result.summary, result.workaround, ...result.labels]) {
     assert.doesNotMatch(text, /\boot\b|kokiri|zelda|nintendo|switch|hyrule|ocarina/i);

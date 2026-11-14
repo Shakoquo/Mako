@@ -18,7 +18,7 @@ class BuilderXml(unittest.TestCase):
     def test_every_file_parses(self):
         files = sorted(f for pattern in ("*.xaml", "*.csproj", "*.manifest")
                        for f in glob.glob(os.path.join(ROOT, "builder", "**", pattern), recursive=True))
-        self.assertTrue(any(f.endswith("LongshotBuilder.csproj") for f in files), "the Builder's LongshotBuilder.csproj is checked")
+        self.assertTrue(any(f.endswith("HookshotBuilder.csproj") for f in files), "the Builder's HookshotBuilder.csproj is checked")
         for f in files:
             with self.subTest(os.path.relpath(f, ROOT)):
                 try:

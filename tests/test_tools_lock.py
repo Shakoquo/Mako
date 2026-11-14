@@ -1,7 +1,7 @@
 """tools.lock and scripts/tools.py (docs/releases.md, "tools.lock"), with authored archives and no network: the lock in the
 repository reads and names only https links; a bad line is refused; a tool comes from the first URL that gives the bytes the
 lock names (the next one when upstream is gone or changed); the download cache is shared; only the archive's prefix is
-unpacked, and nothing outside the install; a line is replaced in place; and the archives Longshot assembles (Python with the
+unpacked, and nothing outside the install; a line is replaced in place; and the archives Hookshot assembles (Python with the
 prompt packages, the CPM cache with dav1d, the third_party prebuilt files, the play profile) are deterministic and hold only
 what they should. The Linux lines (linux-x64) unpack with their modes and relative links, a changed line is unpacked again,
 and an archive packed from a folder is deterministic. builder/setup/setup.c, builder/linux/linux_tools.py and the
@@ -50,15 +50,15 @@ class Lock(unittest.TestCase):
         for t in lock:
             self.assertTrue(all(u.startswith("https://") for u in t.urls), t.name)
             self.assertIn(t.system, tools.SYSTEMS)
-            # (Windows: under the builder's tools folder; Linux: where the AppImage had them, beside its usr/share/longshot)
+            # (Windows: under the builder's tools folder; Linux: where the AppImage had them, beside its usr/share/hookshot)
             if t.system == "windows-x64":
-                self.assertTrue(t.dest.startswith("LongshotBuilder/tools/"), t.name)
+                self.assertTrue(t.dest.startswith("HookshotBuilder/tools/"), t.name)
             else:
-                self.assertRegex(t.dest, r"^usr/(lib|share)/longshot/[a-z0-9]+$", t.name)
+                self.assertRegex(t.dest, r"^usr/(lib|share)/hookshot/[a-z0-9]+$", t.name)
                 self.assertEqual(t.prefix, t.name, t.name)   # (scripts/tools.py pack: the folder's own name)
             # (the forge's copy first, from Cloudflare's edge and then from the forge itself, where it came from as the
             # fallback: never a repository we do not control alone)
-            self.assertEqual(t.urls[:2], tools.store_urls(t), "%s: its copies in Longshot's store are not its first URLs" % t.name)
+            self.assertEqual(t.urls[:2], tools.store_urls(t), "%s: its copies in Hookshot's store are not its first URLs" % t.name)
             self.assertTrue(t.urls[0].startswith(tools.CDN + "/api/packages/"), t.name)
             self.assertTrue(all(not tools.in_store(u) and not u.startswith(tools.CDN) for u in t.urls[2:]), t.name)
         self.assertEqual(tools.named(lock, "llvm-mingw").prefix, "llvm-mingw-20261104-ucrt-x86_64")
@@ -70,10 +70,10 @@ class Lock(unittest.TestCase):
             tools.named(lock, "nothing")
 
     def test_a_bad_line_is_refused(self):
-        good = "tool zstd 1.0 windows-x64 %s 10 LongshotBuilder/tools/zstd - https://x/z.zip" % ("a" * 64)
+        good = "tool zstd 1.0 windows-x64 %s 10 HookshotBuilder/tools/zstd - https://x/z.zip" % ("a" * 64)
         self.assertEqual(tools.parse(good)[0].prefix, "-")
         for bad in (good.replace("https://", "http://"), good.replace("a" * 64, "A" * 64), good.replace(" 10 ", " -1 "),
-                    good.replace("LongshotBuilder/tools/zstd", "../zstd"), good.replace("LongshotBuilder/tools/zstd", "/etc"),
+                    good.replace("HookshotBuilder/tools/zstd", "../zstd"), good.replace("HookshotBuilder/tools/zstd", "/etc"),
                     good.replace(" - ", " a/../b "), good.replace("windows-x64", "mac"), good + "\n" + good, "part x"):
             with self.assertRaises(SystemExit, msg=bad):
                 tools.parse(bad)
@@ -95,12 +95,12 @@ class Lock(unittest.TestCase):
 
     def test_install_unpacks_only_the_prefix_and_stays_inside(self):
         sha, size = zip_of(self.dir / "a.zip", {"HookshotBuilder/tools/python/python.exe": "py", "HookshotBuilder/app.exe": "no"})
-        t = tools.parse("tool python 3 windows-x64 %s %d LongshotBuilder/tools/python HookshotBuilder/tools/python https://x/a"
+        t = tools.parse("tool python 3 windows-x64 %s %d HookshotBuilder/tools/python HookshotBuilder/tools/python https://x/a"
                         % (sha, size))[0]
         data = (self.dir / "a.zip").read_bytes()
         tools.install(str(self.dir / "install"), [t], str(self.dir / "cache"), lambda url: data)
         self.assertEqual(sorted(str(p.relative_to(self.dir / "install")) for p in (self.dir / "install").rglob("*") if p.is_file()),
-                         [os.path.join(".tools", "python"), os.path.join("LongshotBuilder", "tools", "python", "python.exe")])
+                         [os.path.join(".tools", "python"), os.path.join("HookshotBuilder", "tools", "python", "python.exe")])
         self.assertEqual(tools.stamp_of(str(self.dir / "install"), "python"), sha)
         tools.install(str(self.dir / "install"), [t], str(self.dir / "cache"), lambda url: self.fail("again"))   # (there already)
         sha, size = zip_of(self.dir / "b.zip", {"p/../../evil.txt": "x"})
@@ -113,18 +113,18 @@ class Lock(unittest.TestCase):
     def test_a_changed_line_is_unpacked_again(self):
         install = self.dir / "install"
         sha, size = zip_of(self.dir / "a.zip", {"t/old.txt": "1"})
-        old = tools.parse("tool t 1 linux-x64 %s %d usr/lib/longshot/t t https://x/a" % (sha, size))[0]
+        old = tools.parse("tool t 1 linux-x64 %s %d usr/lib/hookshot/t t https://x/a" % (sha, size))[0]
         tools.install(str(install), [old], str(self.dir / "cache"), lambda url: (self.dir / "a.zip").read_bytes())
         sha, size = zip_of(self.dir / "b.zip", {"t/new.txt": "2"})
-        new = tools.parse("tool t 2 linux-x64 %s %d usr/lib/longshot/t t https://x/b" % (sha, size))[0]
+        new = tools.parse("tool t 2 linux-x64 %s %d usr/lib/hookshot/t t https://x/b" % (sha, size))[0]
         tools.install(str(install), [new], str(self.dir / "cache"), lambda url: (self.dir / "b.zip").read_bytes())
-        self.assertEqual(sorted(p.name for p in (install / "usr/lib/longshot/t").iterdir()), ["new.txt"])
+        self.assertEqual(sorted(p.name for p in (install / "usr/lib/hookshot/t").iterdir()), ["new.txt"])
         self.assertEqual(tools.stamp_of(str(install), "t"), sha)
 
     def test_systems_are_apart(self):
         lock = self.dir / "tools.lock"
-        lines = ["tool cpm 1 windows-x64 %s 10 LongshotBuilder/tools/cpm cpm https://x/w" % ("a" * 64),
-                 "tool cpm 1 linux-x64 %s 11 usr/share/longshot/cpm cpm https://x/l" % ("b" * 64)]
+        lines = ["tool cpm 1 windows-x64 %s 10 HookshotBuilder/tools/cpm cpm https://x/w" % ("a" * 64),
+                 "tool cpm 1 linux-x64 %s 11 usr/share/hookshot/cpm cpm https://x/l" % ("b" * 64)]
         lock.write_text("\n".join(lines) + "\n")
         both = tools.load(str(lock))   # (one name on each system: not "twice")
         self.assertEqual((tools.named(both, "cpm").size, tools.named(both, "cpm", "linux-x64").size), (10, 11))
@@ -147,12 +147,12 @@ class Lock(unittest.TestCase):
         self.assertEqual(len(after.splitlines()), len(before.splitlines()))
         self.assertIn("tool cpm dav1d windows-x64", after)
         self.assertTrue(after.startswith("# "))
-        tools.write_line(tools.Tool("profile", "1", "windows-x64", "b" * 64, 5, "LongshotBuilder/tools/work", "work",
+        tools.write_line(tools.Tool("profile", "1", "windows-x64", "b" * 64, 5, "HookshotBuilder/tools/work", "work",
                                     ["https://git.magicbean.dev/api/packages/MagicBeanDev/generic/profile-windows-x64/1/p.zip"]), str(lock))
         self.assertEqual(tools.named(tools.load(str(lock)), "profile").prefix, "work")
 
     def test_the_store_is_the_package_registry(self):
-        t = tools.parse("tool emsdk 23.1.5 linux-x64 %s 10 usr/lib/longshot/emsdk emsdk https://x/e" % ("a" * 64))[0]
+        t = tools.parse("tool emsdk 23.1.5 linux-x64 %s 10 usr/lib/hookshot/emsdk emsdk https://x/e" % ("a" * 64))[0]
         url = "https://git.magicbean.dev/api/packages/MagicBeanDev/generic/emsdk-linux-x64/23.1.5/" + "a" * 64 + "-emsdk.zip"
         self.assertEqual(tools.store_url(t), url)
         self.assertTrue(tools.in_store(url) and not tools.in_store("https://github.com/x/y.zip"))
@@ -186,19 +186,19 @@ class Lock(unittest.TestCase):
 
     def test_check_requires_every_tool(self):
         lock = self.dir / "tools.lock"
-        lock.write_text("tool llvm-mingw 1 windows-x64 %s 10 LongshotBuilder/tools/llvm-mingw - https://x/l\n" % ("a" * 64))
+        lock.write_text("tool llvm-mingw 1 windows-x64 %s 10 HookshotBuilder/tools/llvm-mingw - https://x/l\n" % ("a" * 64))
         self.assertEqual(tools.main(["--lock", str(lock), "check"]), 0)
         with contextlib.redirect_stderr(io.StringIO()) as err:
             self.assertEqual(tools.main(["--lock", str(lock), "check", "--require"]), 1)
         self.assertIn("sysroot (linux-x64)", err.getvalue())   # (each system's tools)
-        full = [("windows-x64", n, "LongshotBuilder/tools/" + n) for n in tools.REQUIRED["windows-x64"]] + \
-               [("linux-x64", n, "usr/lib/longshot/" + n) for n in tools.REQUIRED["linux-x64"]]
+        full = [("windows-x64", n, "HookshotBuilder/tools/" + n) for n in tools.REQUIRED["windows-x64"]] + \
+               [("linux-x64", n, "usr/lib/hookshot/" + n) for n in tools.REQUIRED["linux-x64"]]
         lock.write_text("".join("tool %s 1 %s %s 10 %s - https://x/%s\n" % (n, s, "a" * 64, d, n) for s, n, d in full))
         self.assertEqual(tools.main(["--lock", str(lock), "check", "--require"]), 0)
         # (a line's copy in the store must answer, with its size; upstream links are not asked)
-        t = tools.parse("tool zlib 1 linux-x64 %s 10 usr/lib/longshot/zlib zlib https://x/z" % ("b" * 64))[0]
+        t = tools.parse("tool zlib 1 linux-x64 %s 10 usr/lib/hookshot/zlib zlib https://x/z" % ("b" * 64))[0]
         with open(lock, "a") as f:
-            f.write("tool zlib 1 linux-x64 %s 10 usr/lib/longshot/zlib zlib %s\n" % ("b" * 64, " ".join(tools.store_urls(t))))
+            f.write("tool zlib 1 linux-x64 %s 10 usr/lib/hookshot/zlib zlib %s\n" % ("b" * 64, " ".join(tools.store_urls(t))))
         asked = []
         for answer, rc in (((True, 10, "b" * 64), 0), ((False, None, None), 1), ((True, 9, "b" * 64), 1), ((True, 10, "c" * 64), 1)):
             with mock.patch.object(tools, "exists", lambda u, answer=answer: asked.append(u) or answer), \
@@ -247,9 +247,9 @@ class Pack(unittest.TestCase):
         self.assertEqual(again, (sha, size))   # (deterministic)
         with zipfile.ZipFile(self.dir / "a.zip") as z:
             self.assertTrue(all(n.startswith("emsdk/") for n in z.namelist()))
-        t = tools.parse("tool emsdk 1 linux-x64 %s %d usr/lib/longshot/emsdk emsdk https://x/a" % (sha, size))[0]
+        t = tools.parse("tool emsdk 1 linux-x64 %s %d usr/lib/hookshot/emsdk emsdk https://x/a" % (sha, size))[0]
         tools.install(str(self.dir / "install"), [t], str(self.dir / "cache"), lambda url: (self.dir / "a.zip").read_bytes())
-        out = self.dir / "install/usr/lib/longshot/emsdk"
+        out = self.dir / "install/usr/lib/hookshot/emsdk"
         self.assertTrue(os.access(out / "upstream/bin/clang-23", os.X_OK))
         self.assertFalse(os.access(out / "LICENSE.TXT", os.X_OK))
         self.assertEqual(os.readlink(out / "upstream/bin/clang"), "clang-23")
@@ -285,13 +285,13 @@ class Assemble(unittest.TestCase):
         add = self.dir / "add" / "dav1d" / "1.5.4" / "lib"
         add.mkdir(parents=True)
         (add / "libdav1d.a").write_bytes(b"!<arch>\n")
-        t = tools.Tool("cpm", "1", "windows-x64", "a" * 64, 1, "LongshotBuilder/tools/cpm", "HookshotBuilder/tools/cpm", ["https://x"])
+        t = tools.Tool("cpm", "1", "windows-x64", "a" * 64, 1, "HookshotBuilder/tools/cpm", "HookshotBuilder/tools/cpm", ["https://x"])
         first = tools.assemble_cpm(t, str(self.dir / "cpm.zip"), str(self.dir / "add"), str(self.dir / "new.zip"))
         with zipfile.ZipFile(self.dir / "new.zip") as z:
             self.assertEqual(sorted(z.namelist()), ["cpm/dav1d/1.5.4/lib/libdav1d.a", "cpm/ffmpeg/9/lib/avcodec.lib"])
         again = tools.assemble_cpm(t, str(self.dir / "cpm.zip"), str(self.dir / "add"), str(self.dir / "again.zip"))
         self.assertEqual(first, again)                                   # (deterministic)
-        t2 = tools.Tool("cpm", "2", "windows-x64", "a" * 64, 1, "LongshotBuilder/tools/cpm", "cpm", ["https://x"])
+        t2 = tools.Tool("cpm", "2", "windows-x64", "a" * 64, 1, "HookshotBuilder/tools/cpm", "cpm", ["https://x"])
         self.assertIsNone(tools.assemble_cpm(t2, str(self.dir / "new.zip"), str(self.dir / "add"), str(self.dir / "n.zip")))
 
     def test_python_gets_the_missing_pins_for_its_version(self):
@@ -299,7 +299,7 @@ class Assemble(unittest.TestCase):
                                      "HookshotBuilder/tools/python/Lib/site-packages/pillow-13.0.0.dist-info/METADATA": "m"})
         req = self.dir / "req.txt"
         req.write_text("pillow==13.0.0\nfonttools==4.68.0  # a comment\n")
-        t = tools.Tool("python", "1", "windows-x64", "a" * 64, 1, "LongshotBuilder/tools/python", "HookshotBuilder/tools/python", ["https://x"])
+        t = tools.Tool("python", "1", "windows-x64", "a" * 64, 1, "HookshotBuilder/tools/python", "HookshotBuilder/tools/python", ["https://x"])
         ran = []
 
         def pip(args, check):
@@ -327,11 +327,11 @@ class Assemble(unittest.TestCase):
     def test_the_profile(self):
         work = self.dir / "work"
         work.mkdir()
-        for n in ("hot_order.txt", "longshot_pieces.prof", "image.bin", "dump.txt"):
+        for n in ("hot_order.txt", "hookshot_pieces.prof", "image.bin", "dump.txt"):
             (work / n).write_text(n)
         tools.assemble_profile(str(work), str(self.dir / "p.zip"))
         with zipfile.ZipFile(self.dir / "p.zip") as z:
-            self.assertEqual(sorted(z.namelist()), ["work/hot_order.txt", "work/longshot_pieces.prof"])   # (nothing of the game)
+            self.assertEqual(sorted(z.namelist()), ["work/hot_order.txt", "work/hookshot_pieces.prof"])   # (nothing of the game)
 
 
 if __name__ == "__main__":

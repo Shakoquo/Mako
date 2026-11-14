@@ -1,6 +1,6 @@
 // Where the site and the project live. Pages are served from the root of the site's own domain.
-export const siteUrl = 'https://longshot.magicbean.dev';
-export const repository = 'https://git.magicbean.dev/MagicBeanDev/Longshot';
+export const siteUrl = 'https://hookshot.magicbean.dev';
+export const repository = 'https://git.magicbean.dev/MagicBeanDev/Hookshot';
 export const issueUrl = `${repository}/issues/new`;
 /** A file in the repository on Forgejo, on main. */
 export const sourceUrl = (file: string) => `${repository}/src/branch/main/${file}`;

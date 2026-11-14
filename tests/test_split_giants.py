@@ -4,7 +4,7 @@ Text checks: what is cut (pieces of about the size asked, every label in exactly
 gotos into other pieces become returns of the label's id with their interrupt poll kept, guest returns and tail calls
 become ids the dispatcher turns into `return` and TAILCALL), what is left whole and why (a top-level declaration, a label
 inside a block, a literal, a goto to a label the function lacks, a function too small or below the size asked), and
-build.py's switch (on at 8 KB unless LONGSHOT_SPLIT_GIANTS says otherwise).
+build.py's switch (on at 8 KB unless HOOKSHOT_SPLIT_GIANTS says otherwise).
 
 Compiled checks (Clang: the build compiles lifted code with clang on every OS, nx2/build.py `toolchain.find("clang")`),
 each a function compiled whole and split into one program against the build's own guest model (nx2/rtgen.py's a64.h),
@@ -287,21 +287,21 @@ def text_checks():
         check(any(why in n for n in notes), "the note says why (%s): %s" % (why, notes))
     # build.py: the switch, and the copy compile_copy makes (compile_one itself: compiled check 3)
     import build
-    old = os.environ.get("LONGSHOT_SPLIT_GIANTS")
+    old = os.environ.get("HOOKSHOT_SPLIT_GIANTS")
     try:
-        os.environ["LONGSHOT_SPLIT_GIANTS"] = "0"
-        check(build.split_giants_flags() == [], "LONGSHOT_SPLIT_GIANTS=0: no flag")
-        os.environ.pop("LONGSHOT_SPLIT_GIANTS", None)
+        os.environ["HOOKSHOT_SPLIT_GIANTS"] = "0"
+        check(build.split_giants_flags() == [], "HOOKSHOT_SPLIT_GIANTS=0: no flag")
+        os.environ.pop("HOOKSHOT_SPLIT_GIANTS", None)
         f = build.split_giants_flags()
         check(len(f) == 1 and f[0].startswith(SG.FLAG + "%d_" % SG.PIECE_KB), "unset: on at %d KB by default: %s" % (SG.PIECE_KB, f))
-        os.environ["LONGSHOT_SPLIT_GIANTS"] = "16"
+        os.environ["HOOKSHOT_SPLIT_GIANTS"] = "16"
         f = build.split_giants_flags()
-        check(len(f) == 1 and f[0].startswith(SG.FLAG + "16_"), "LONGSHOT_SPLIT_GIANTS=16: the flag names the size: %s" % f)
+        check(len(f) == 1 and f[0].startswith(SG.FLAG + "16_"), "HOOKSHOT_SPLIT_GIANTS=16: the flag names the size: %s" % f)
     finally:
         if old is None:
-            os.environ.pop("LONGSHOT_SPLIT_GIANTS", None)
+            os.environ.pop("HOOKSHOT_SPLIT_GIANTS", None)
         else:
-            os.environ["LONGSHOT_SPLIT_GIANTS"] = old
+            os.environ["HOOKSHOT_SPLIT_GIANTS"] = old
     with tempfile.TemporaryDirectory() as d:
         p = os.path.join(d, "code_000.c")
         open(p, "w", newline="\n").write(big_source("f_00002000"))
@@ -418,9 +418,9 @@ int main(void) {
 
 
 def find_cc(asked):
-    """Clang: the one asked, $CC, clang on PATH, or the build's LONGSHOT_MINGW toolchain; None when there is none"""
+    """Clang: the one asked, $CC, clang on PATH, or the build's HOOKSHOT_MINGW toolchain; None when there is none"""
     cands = [asked] if asked else [os.environ.get("CC"), "clang"]
-    m = os.environ.get("LONGSHOT_MINGW")
+    m = os.environ.get("HOOKSHOT_MINGW")
     if m and not asked:
         cands += [os.path.join(m, "bin", n) for n in ("x86_64-w64-mingw32-clang.exe", "clang.exe", "clang")]
     for c in cands:
@@ -520,14 +520,14 @@ def compiled_checks(cc):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cc", help="Clang (default: $CC, clang on PATH, or LONGSHOT_MINGW's)")
+    ap.add_argument("--cc", help="Clang (default: $CC, clang on PATH, or HOOKSHOT_MINGW's)")
     a = ap.parse_args()
     text_checks()
     real_text_checks()
     cc = find_cc(a.cc)
     if not cc:
         check(False, "no Clang to compile with (%s): the build compiles lifted code with clang; give --cc, $CC, PATH or "
-                     "LONGSHOT_MINGW" % (a.cc or "none found"))
+                     "HOOKSHOT_MINGW" % (a.cc or "none found"))
     elif sys.maxsize <= 2 ** 32:
         check(False, "a 64-bit host is needed (the guest model's window)")
     else:

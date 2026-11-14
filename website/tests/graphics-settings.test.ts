@@ -163,7 +163,7 @@ function catalogueFixture(unfoldedHdr = false) {
     contains: target => cards.some(card => card.heading === target),
   });
   const document = { querySelector: () => root, getElementById: id => cards.find(card => card.id === id)?.heading };
-  const window = events({ location: new URL('https://example.test/Longshot/guides/graphics-and-controls/'), requestAnimationFrame: fn => fn() });
+  const window = events({ location: new URL('https://example.test/Hookshot/guides/graphics-and-controls/'), requestAnimationFrame: fn => fn() });
   installGraphicsSettings(document, window);
   const search = (query, group = '') => { fields.query.value = query; fields.group.value = group; form.emit('input'); };
   return { cards, groups, fields, form, count, empty, root, window, search };

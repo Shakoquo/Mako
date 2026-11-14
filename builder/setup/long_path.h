@@ -3,8 +3,8 @@
    \\?\ form (\\?\UNC\ for a share), which Windows' file calls take up to 32767 characters; the trees are walked in one
    heap buffer per side, a name appended in place and cut off again.
    Include after windows.h (or a stand-in for its file calls: tests/test_setup_tool_merge.py). */
-#ifndef LONGSHOT_LONG_PATH_H
-#define LONGSHOT_LONG_PATH_H
+#ifndef HOOKSHOT_LONG_PATH_H
+#define HOOKSHOT_LONG_PATH_H
 #include <stdlib.h>
 #include <wchar.h>
 
@@ -44,7 +44,7 @@ static size_t long_join(wchar_t *p, size_t n, const wchar_t *name) {
 }
 
 /* 1 when path (n characters) is folder (m characters) or lies under it: both from long_path, compared without case as
-   Windows' file names are. ...\LongshotBuilder2 is not under ...\LongshotBuilder. Only the spelling is compared: the same
+   Windows' file names are. ...\HookshotBuilder2 is not under ...\HookshotBuilder. Only the spelling is compared: the same
    folder named another way (a mapped drive and its share, a short 8.3 name, a link) is not seen. */
 static int long_within(const wchar_t *path, size_t n, const wchar_t *folder, size_t m) {
     if (!m || n < m || CompareStringOrdinal(path, (int)m, folder, (int)m, TRUE) != CSTR_EQUAL) return 0;

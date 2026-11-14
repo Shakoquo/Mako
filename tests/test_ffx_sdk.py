@@ -120,7 +120,7 @@ class MakeGameTests(unittest.TestCase):
         data = {p: ("file %s" % p).encode() for p, _, _ in ffx_sdk.FILES}
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(ffx_sdk, "FILES", fake_table(data)), \
                 mock.patch.object(make_game, "ffx_script", return_value=ffx_sdk), \
-                mock.patch.dict(os.environ, {"LONGSHOT_FFX_SDK": os.path.join(tmp, "sdk")}):
+                mock.patch.dict(os.environ, {"HOOKSHOT_FFX_SDK": os.path.join(tmp, "sdk")}):
             game = os.path.join(tmp, "game")
             os.makedirs(game)
             self.assertIsNone(make_game.place_fsr_runtime(game))   # (nothing fetched: nothing placed)

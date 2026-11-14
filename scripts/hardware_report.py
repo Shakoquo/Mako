@@ -2,7 +2,7 @@
 
     python -I scripts/hardware_report.py [--limit 1000] [--state all|open|closed]
 
-Reads MagicBeanDev/Longshot's issues on git.magicbean.dev through the Forgejo API, signed in as scripts/forge.py is (run
+Reads MagicBeanDev/Hookshot's issues on git.magicbean.dev through the Forgejo API, signed in as scripts/forge.py is (run
 `python -I scripts/forge.py login` once), and counts the "Graphics card and driver version" and "CPU, RAM and operating
 system" answers. It counts reports, not players: hardware where things break shows up more. Standard library only.
 """
@@ -14,7 +14,7 @@ import sys
 import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import forge  # noqa: E402  (same folder: its signed-in API client and REPO, MagicBeanDev/Longshot)
+import forge  # noqa: E402  (same folder: its signed-in API client and REPO, MagicBeanDev/Hookshot)
 
 
 def issues(state, limit):

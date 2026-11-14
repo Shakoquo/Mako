@@ -7,7 +7,7 @@ export const runHeader = '| Date | Build | OS / desktop | GPU / driver | CPU / R
 export const runSeparator = '|---|---|---|---|---|---|---|---|';
 export const fragmentsMarker = '<!-- tested-run-fragments -->';
 export const fragmentDirectory = 'docs/tested';
-export const publicTestedRunsMarker = '<!-- longshot-tested-configurations-public-copy -->';
+export const publicTestedRunsMarker = '<!-- hookshot-tested-configurations-public-copy -->';
 
 interface RunFragment { name: string; text: string }
 type PresentRun = (row: string, source: string) => string;

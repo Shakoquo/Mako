@@ -3,14 +3,14 @@
      play files, the prepare's record, the driver's faults) and the button prompts made from the player's controls (cache/prompts,
      host/prompts.c). Made for this build and this GPU, several GB: its name says it can be deleted, and the next start makes it
      again;
-   - logs/: longshot_log.txt and the runs before it, and the other logs and traces a run writes.
+   - logs/: hookshot_log.txt and the runs before it, and the other logs and traces a run writes.
    Both are made at the start, before anything writes there; the renderer finds them by gpu/vk/vk_paths.h's cache_path and
    log_path. What a build from before left loose beside the game is moved into them once: renames in the same folder, never over
    a file already there (one that cannot move stays, and the log says so). The Vulkan pipeline cache is renamed on the way, from
-   mkw-recomp's mkw_vk_pipelines*.bin to longshot_vk_pipelines*.bin, and what a write of it cut short left (a .tmp) is deleted;
+   mkw-recomp's mkw_vk_pipelines*.bin to hookshot_vk_pipelines*.bin, and what a write of it cut short left (a .tmp) is deleted;
    the button prompts an older build made in prompts/ are deleted, as they are made again in cache/prompts. The build's own files
-   stay where the build put them (image.bin, romfs, longshot_shaders.bin, the shipped pipeline list, prompts/<face>/, language.txt),
-   and so do the settings (longshot_options.ini, longshot_env.txt) and the saves (user/). */
+   stay where the build put them (image.bin, romfs, hookshot_shaders.bin, the shipped pipeline list, prompts/<face>/, language.txt),
+   and so do the settings (hookshot_options.ini, hookshot_env.txt) and the saves (user/). */
 #include "hos_paths.h"   /* (first: windows.h, host/posix's on Linux) */
 #include <stdio.h>
 #include <string.h>
@@ -26,23 +26,23 @@ void hos_log(const char *fmt, ...);   /* (hos.h; declared here so tests/test_gam
 
 /* The logs into logs/, the caches into cache/ */
 static const char *const to_logs[] = {
-    "longshot_log.txt", "longshot_log.1.txt", "longshot_log.2.txt", "longshot_log.3.txt", "longshot_log.4.txt",
-    "longshot_startup.log", "longshot_frames.csv",
+    "hookshot_log.txt", "hookshot_log.1.txt", "hookshot_log.2.txt", "hookshot_log.3.txt", "hookshot_log.4.txt",
+    "hookshot_startup.log", "hookshot_frames.csv",
 };
 static const char *const to_cache[] = {
-    "longshot_programs.bin", "longshot_programs.idx", "longshot_programs.zst.bin", "longshot_programs.zst.idx",
-    "longshot_module_ids.bin", "longshot_pipelines.bin", "longshot_pipelines.bin.predicted",
-    "longshot_pipelines.bin.predicted_keys", "longshot_pipelines.bin.built", "longshot_pipelines.bin.running",
-    "longshot_pipelines.bin.predicting", "longshot_pipelines.bin.built.warming", "longshot_computes.bin",
-    "longshot_compute_variants.bin", "longshot_pipeline_states.bin", "longshot_pipeline_states_v1.bin", "longshot_prepared.bin",
-    "longshot_prepared.bin.warming", "longshot_prepare_skipped", "longshot_driver_faults.txt", "longshot_load_start.txt",
-    "longshot_load_start.txt.waited",
+    "hookshot_programs.bin", "hookshot_programs.idx", "hookshot_programs.zst.bin", "hookshot_programs.zst.idx",
+    "hookshot_module_ids.bin", "hookshot_pipelines.bin", "hookshot_pipelines.bin.predicted",
+    "hookshot_pipelines.bin.predicted_keys", "hookshot_pipelines.bin.built", "hookshot_pipelines.bin.running",
+    "hookshot_pipelines.bin.predicting", "hookshot_pipelines.bin.built.warming", "hookshot_computes.bin",
+    "hookshot_compute_variants.bin", "hookshot_pipeline_states.bin", "hookshot_pipeline_states_v1.bin", "hookshot_prepared.bin",
+    "hookshot_prepared.bin.warming", "hookshot_prepare_skipped", "hookshot_driver_faults.txt", "hookshot_load_start.txt",
+    "hookshot_load_start.txt.waited",
 };
 /* The Vulkan pipeline cache, mkw_vk_pipelines.bin, its stamp and its play files mkw_vk_pipelines_play_<n>.bin (mkw-recomp's
-   names), renamed longshot_vk_pipelines* as they move into cache/ (gpu/vk/vk_draw.cpp, pcache_stamp.h) */
-static const char old_pcache[] = "mkw_vk_pipelines", new_pcache[] = "longshot_vk_pipelines";
+   names), renamed hookshot_vk_pipelines* as they move into cache/ (gpu/vk/vk_draw.cpp, pcache_stamp.h) */
+static const char old_pcache[] = "mkw_vk_pipelines", new_pcache[] = "hookshot_vk_pipelines";
 /* The program cache's lock files beside it (gpu/vk/vk_progcache.cpp): the game locks cache/'s now, and nothing holds these: deleted */
-static const char *const old_locks[] = {"longshot_programs.bin.lock", "longshot_programs.zst.bin.lock"};
+static const char *const old_locks[] = {"hookshot_programs.bin.lock", "hookshot_programs.zst.bin.lock"};
 /* Made from the player's choices and made again when missing (host/prompts.c): deleted from the game folder */
 static const char *const made_again[] = {
     "prompts" SEP_S "Common.bntx.zs", "prompts" SEP_S "Common.blarc.zs", "prompts" SEP_S "Common.key",
@@ -111,7 +111,7 @@ void hos_game_layout(void) {
     for (size_t i = 0; i < sizeof to_logs / sizeof *to_logs; i++) move_as(game, to_logs[i], logs, to_logs[i]);
     for (size_t i = 0; i < sizeof to_cache / sizeof *to_cache; i++) move_as(game, to_cache[i], cache, to_cache[i]);
     each_old_pcache(game, cache, ".bin", 1);
-    move_as(game, "mkw_vk_pipelines.stamp", cache, "longshot_vk_pipelines.stamp");   /* (which translator made them) */
+    move_as(game, "mkw_vk_pipelines.stamp", cache, "hookshot_vk_pipelines.stamp");   /* (which translator made them) */
     each_old_pcache(game, cache, ".tmp", 0);     /* (a write cut short: never read) */
     each_old_pcache(game, cache, ".tmp-*", 0);   /* (one with its writer's own name, gpu/vk/pipeline_cache_file.h) */
     for (size_t i = 0; i < sizeof old_locks / sizeof *old_locks; i++) {

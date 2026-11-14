@@ -120,7 +120,7 @@ test('missing or malformed frozen boundaries and tables stop assembly', () => {
 });
 
 test('local discovery excludes README and nested files, and sees creation, edit and deletion', async t => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'longshot-tested-runs-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'hookshot-tested-runs-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   await writeFile(path.join(directory, 'README.md'), 'Fragment instructions, not data.\n');
   await writeFile(path.join(directory, 'notes.txt'), 'Not a fragment.\n');
@@ -140,7 +140,7 @@ test('local discovery excludes README and nested files, and sees creation, edit 
 });
 
 test('fragment links resolve at their own paths while the frozen document keeps its link base', async t => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'longshot-tested-links-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'hookshot-tested-links-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const links = '[trace](./trace.md) [readme](../../README.md#project-status) ' +
     '[install](../getting-started.md) <a href="./trace.md">trace</a>';

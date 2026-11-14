@@ -1,4 +1,4 @@
-// (longshot) How many workers the shader preparation's first part runs on (vk_draw.cpp prepare_run: every program translated,
+// (hookshot) How many workers the shader preparation's first part runs on (vk_draw.cpp prepare_run: every program translated,
 // and the driver's compile of each compute program's variants, for its cache).
 //
 // Half the CPUs (half_cpus), as before, unless the process heap is the segment heap (nx2/win_manifest.py's heapType). The

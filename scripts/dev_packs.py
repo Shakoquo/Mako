@@ -13,13 +13,13 @@ changes nothing in what players build (docs/development.md, *Testing a change ag
         <dir>/warm-runtime when rt made it there beforehand), copy the caches play made or grew back into the base's game
         folder, and delete the runtime: every later runtime starts warm for those scenes.
     python -I scripts/dev_packs.py adopt <dir> --work <work> --game <game> --romfs <romfs> --exefs <exefs>
-        Use a full build of this checkout's commit that already exists (built with LONGSHOT_KEEP_BUILD_FILES=1) as the base.
+        Use a full build of this checkout's commit that already exists (built with HOOKSHOT_KEEP_BUILD_FILES=1) as the base.
     python -I scripts/dev_packs.py pack <dir> <name> [--tree <checkout>] [--prepare | --no-prepare]
         Build a change (a checkout whose history contains the base's commit; committed, uncommitted and untracked files all
         count) into <dir>/packs/<name>:
           - only renderer files the game is not built from (gpu/vk/ and the renderer's third_party, but renderer_read_by_game):
             the renderer alone (RX_VK_ONLY: no lift, no game; seconds to minutes);
-          - anything else: the game with make_game.py (LONGSHOT_NO_PREPARE=1), which builds both modules, in one work folder
+          - anything else: the game with make_game.py (HOOKSHOT_NO_PREPARE=1), which builds both modules, in one work folder
             shared by the base's packs (pack_folders), so after the first game pack the lift is skipped while the translator,
             the HLE list and the hot list stay the same.
         The pack keeps a module when an object it is linked from differs from the base's (module_changed), and any other file
@@ -61,26 +61,26 @@ CROSS = WINDOWS and os.name != "nt"   # (the Windows game built on Linux: it can
 # variants, the state lists (and the older one still read), the prepare's record, and the driver's pipeline cache with
 # its stamp (without it the cache and its play files are dropped, pcache_stamp.h))
 CACHE_DIR = "cache"
-CACHES = ("longshot_programs.bin", "longshot_programs.idx", "longshot_programs.zst.bin", "longshot_programs.zst.idx",
-          "longshot_module_ids.bin", "longshot_pipelines.bin", "longshot_pipelines.bin.predicted", "longshot_pipelines.bin.predicted_keys",
-          "longshot_pipelines.bin.built",
-          "longshot_computes.bin", "longshot_compute_variants.bin", "longshot_pipeline_states.bin",
-          "longshot_pipeline_states_v1.bin", "longshot_prepared.bin", "longshot_vk_pipelines.bin", "longshot_vk_pipelines.stamp")
-PLAY_FILES = re.compile(r"longshot_vk_pipelines_play_[0-9]+\.bin")   # (what play adds to the pipeline cache: gpu/vk/vk_draw.cpp play_path)
+CACHES = ("hookshot_programs.bin", "hookshot_programs.idx", "hookshot_programs.zst.bin", "hookshot_programs.zst.idx",
+          "hookshot_module_ids.bin", "hookshot_pipelines.bin", "hookshot_pipelines.bin.predicted", "hookshot_pipelines.bin.predicted_keys",
+          "hookshot_pipelines.bin.built",
+          "hookshot_computes.bin", "hookshot_compute_variants.bin", "hookshot_pipeline_states.bin",
+          "hookshot_pipeline_states_v1.bin", "hookshot_prepared.bin", "hookshot_vk_pipelines.bin", "hookshot_vk_pipelines.stamp")
+PLAY_FILES = re.compile(r"hookshot_vk_pipelines_play_[0-9]+\.bin")   # (what play adds to the pipeline cache: gpu/vk/vk_draw.cpp play_path)
 # (what the game writes into its folder at run time, never a build's output: the caches (and the button prompts it makes) in
 # cache/, the logs in logs/ (host/game_layout.c)
 RUNTIME_DIRS = (CACHE_DIR + "/", "logs/")
 # (an older game folder kept its caches loose beside the game, the Vulkan pipeline cache as mkw_vk_pipelines*: a seed from
 # one is copied as it is, and the game's first start moves them into cache/ (host/game_layout.c))
-OLD_CACHES = tuple(c.replace("longshot_vk_pipelines", "mkw_vk_pipelines") for c in CACHES)
+OLD_CACHES = tuple(c.replace("hookshot_vk_pipelines", "mkw_vk_pipelines") for c in CACHES)
 OLD_PLAY_FILES = re.compile(r"mkw_vk_pipelines_play_[0-9]+\.bin")
 BUSY = "dev_packs.busy"   # (in a base's folder while a job builds, warms or copies from it)
-SEED = "longshot_shaders.bin"   # (the shader list the prepare goes through: a new one is prepared again)
+SEED = "hookshot_shaders.bin"   # (the shader list the prepare goes through: a new one is prepared again)
 # (module, its map, its link list in sa/build, the object that holds the version: nx2/build.py gives hos_main.c and vk_menu.cpp
 # nx2/version.py's describe(), a fingerprint of every source, so those two objects differ in every build of another tree)
-MODULES = ((("longshot.exe", "longshot.map", "objs.rsp", "host_hos_main.o"),
-            ("longshot_vk.dll", "longshot_vk.map", "vk_objs.rsp", "vk_vk_menu.o")) if WINDOWS else
-           (("longshot", None, "objs.rsp", "host_hos_main.o"), ("longshot_vk.so", None, "vk_objs.rsp", "vk_vk_menu.o")))
+MODULES = ((("hookshot.exe", "hookshot.map", "objs.rsp", "host_hos_main.o"),
+            ("hookshot_vk.dll", "hookshot_vk.map", "vk_objs.rsp", "vk_vk_menu.o")) if WINDOWS else
+           (("hookshot", None, "objs.rsp", "host_hos_main.o"), ("hookshot_vk.so", None, "vk_objs.rsp", "vk_vk_menu.o")))
 GAME, RENDERER = MODULES[0][0], MODULES[1][0]
 STAMPED_SOURCES = ("host/hos_main.c", "gpu/vk/vk_menu.cpp")
 # (nx2/build.py's shader stamp is made of the files the checkout's own nx2/translator_files.py names (translator_changed); a
@@ -90,17 +90,17 @@ OLD_TRANSLATOR = ("gpu/vk/eden/", "gpu/vk/sirit/", "gpu/vk/compat/", "gpu/vk/vk_
 TRANSLATOR_FILES = "nx2/translator_files.py"
 RENDERER_ONLY = ("gpu/vk/", "third_party/imgui/", "third_party/fidelityfx")
 INCLUDE = re.compile(r'#\s*include\s+"([^"]+)"')
-NO_MODULE = ("docs/", "tests/", ".github/", ".forgejo/", ".claude/")   # (.forgejo: Longshot's workflows and templates)
+NO_MODULE = ("docs/", "tests/", ".github/", ".forgejo/", ".claude/")   # (.forgejo: Hookshot's workflows and templates)
 HEADERS = (".h", ".hpp", ".hh", ".inc", ".inl")
 SOURCES = (".c", ".cc", ".cpp") + HEADERS
 # (files the game writes beside itself while it runs, besides the caches: never a build's output, so never "deleted" by a pack)
 # (what the game writes beside itself while it runs, never a build's output: settings, logs and reports, and the markers of a
 # skipped preparation and of a slow load (vk_main.cpp, vk_draw.cpp); not seeded either)
-WRITTEN_IN_PLAY = ("longshot_options.ini", "longshot_log.txt", "longshot_log.1.txt", "longshot_driver_faults.txt",
-                   "longshot_prepared.bin.warming", "longshot_pipelines.bin.predicting", "longshot_pipelines.bin.running",
-                   "longshot_pipelines.bin.built.warming", "longshot_prepare_skipped", "longshot_load_start.txt",
-                   "longshot_load_start.txt.waited", "longshot_pipeline_report.txt", "longshot_frames.csv",
-                   "longshot_damaged_files.txt")
+WRITTEN_IN_PLAY = ("hookshot_options.ini", "hookshot_log.txt", "hookshot_log.1.txt", "hookshot_driver_faults.txt",
+                   "hookshot_prepared.bin.warming", "hookshot_pipelines.bin.predicting", "hookshot_pipelines.bin.running",
+                   "hookshot_pipelines.bin.built.warming", "hookshot_prepare_skipped", "hookshot_load_start.txt",
+                   "hookshot_load_start.txt.waited", "hookshot_pipeline_report.txt", "hookshot_frames.csv",
+                   "hookshot_damaged_files.txt")
 
 
 def translator_changed(tree, changed):
@@ -302,18 +302,18 @@ def clear_output(game):
 
 
 def object_store():
-    """(nx2/object_store.py) The object store every base and pack on this PC shares, unless LONGSHOT_OBJ_STORE names another (or
+    """(nx2/object_store.py) The object store every base and pack on this PC shares, unless HOOKSHOT_OBJ_STORE names another (or
     is empty or 0: none): a new base compiles only what no earlier one did. In the user's cache folder; on another drive than the
-    bases its objects are copied instead of linked, so set LONGSHOT_OBJ_STORE to a folder on the bases' drive"""
+    bases its objects are copied instead of linked, so set HOOKSHOT_OBJ_STORE to a folder on the bases' drive"""
     if os.name == "nt":
-        return os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Longshot", "objects")
-    return os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "longshot-objects")
+        return os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Hookshot", "objects")
+    return os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "hookshot-objects")
 
 
 def run(cmd, cwd, env=None):
     print("+ " + " ".join(cmd), flush=True)
     e = dict(os.environ, **(env or {}))
-    e.setdefault("LONGSHOT_OBJ_STORE", object_store())
+    e.setdefault("HOOKSHOT_OBJ_STORE", object_store())
     subprocess.run(cmd, cwd=cwd, check=True, env=e)
 
 
@@ -359,7 +359,7 @@ def prepare(game, b, required=True):
 
 def make_game(tree, b, work, game, env):
     run([sys.executable, "-I", "nx2/make_game.py", "--romfs", b["romfs"], "--exefs", b["exefs"], "--work", work, "--out", game,
-         "--language", b.get("language", "en-US")], tree, dict(env, LONGSHOT_KEEP_BUILD_FILES="1"))
+         "--language", b.get("language", "en-US")], tree, dict(env, HOOKSHOT_KEEP_BUILD_FILES="1"))
 
 
 def read_base(d):
@@ -459,11 +459,11 @@ def cmd_base(a):
     # (make_game.py builds without preparing; the outputs are recorded then, before the preparation, so nothing it writes beside
     # the game (caches, markers, files the renderer adds later) is ever taken for a build's output; then the preparation runs
     # here, with the budget if one is set, which so never reaches make_game.py's lift key)
-    make_game(tree, b, work, game, {"LONGSHOT_NO_PREPARE": "1"})
+    make_game(tree, b, work, game, {"HOOKSHOT_NO_PREPARE": "1"})
     b["outputs"] = build_outputs(game)
-    if os.environ.get("LONGSHOT_NO_PREPARE", "0") != "0":   # (as make_game.py reads it: set and not 0)
-        b["not_prepared"] = "LONGSHOT_NO_PREPARE is set"
-        print("the shaders were not prepared now (LONGSHOT_NO_PREPARE is set): the game prepares them at its first start", flush=True)
+    if os.environ.get("HOOKSHOT_NO_PREPARE", "0") != "0":   # (as make_game.py reads it: set and not 0)
+        b["not_prepared"] = "HOOKSHOT_NO_PREPARE is set"
+        print("the shaders were not prepared now (HOOKSHOT_NO_PREPARE is set): the game prepares them at its first start", flush=True)
     else:   # (a failure keeps the compiled base, its reason in base.json)
         b["not_prepared"] = prepare(game, b, required=False)
     b["build_s"] = round(time.time() - t)
@@ -505,12 +505,12 @@ def cmd_pack(a):
     if how == "game":
         link_objects(b["work"], w["game_work"])
         clear_output(w["game_out"])
-        make_game(tree, b, w["game_work"], w["game_out"], {"LONGSHOT_NO_PREPARE": "1"})
+        make_game(tree, b, w["game_work"], w["game_out"], {"HOOKSHOT_NO_PREPARE": "1"})
         built, kinds = os.path.join(w["game_work"], "sa", "build"), MODULES
     elif how == "renderer":
         link_objects(b["work"], w["renderer_work"])
         run([sys.executable, "-I", "nx2/build.py", "--standalone"], tree,
-            {"OOT_WORK": w["renderer_work"], "RX_RELEASE": "1", "RX_VK_ONLY": "1", "LONGSHOT_KEEP_BUILD_FILES": "1"})
+            {"OOT_WORK": w["renderer_work"], "RX_RELEASE": "1", "RX_VK_ONLY": "1", "HOOKSHOT_KEEP_BUILD_FILES": "1"})
         built, kinds = os.path.join(w["renderer_work"], "sa", "build"), MODULES[1:]
     else:
         built, kinds = None, ()

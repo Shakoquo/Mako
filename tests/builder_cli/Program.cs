@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using LongshotBuilder;
+using HookshotBuilder;
 
-/// The Windows builder's --cli (builder/LongshotBuilder/Runner.cs, as Program.Cli runs it): make_game.py started with the
+/// The Windows builder's --cli (builder/HookshotBuilder/Runner.cs, as Program.Cli runs it): make_game.py started with the
 /// arguments as given, the environment the builder passes on (the build workers and memory as inherited, its home, no DLSS or
 /// FSR SDK folder from the PC), and its lines and result delivered. An authored make_game.py stands in for the real one.
 static class Program
@@ -40,11 +40,11 @@ static class Program
         Require(info.WorkingDirectory == tools.Root && !info.UseShellExecute && info.CreateNoWindow
             && info.RedirectStandardOutput && info.RedirectStandardError, "Runner process options changed.");
         Require(Env(info, "PYTHONIOENCODING") == "utf-8", "make_game.py must write UTF-8.");
-        Require(Env(info, "LONGSHOT_BUILDER_EXE") == Environment.ProcessPath, "The game folder's builder= must name this program.");
-        Require(Env(info, "LONGSHOT_SETUP_BASE") == BuilderHome.Base, "The builder's home was not passed on.");
-        Require(Env(info, "LONGSHOT_NGX_SDK") == null && Env(info, "LONGSHOT_FFX_SDK") == null,
+        Require(Env(info, "HOOKSHOT_BUILDER_EXE") == Environment.ProcessPath, "The game folder's builder= must name this program.");
+        Require(Env(info, "HOOKSHOT_SETUP_BASE") == BuilderHome.Base, "The builder's home was not passed on.");
+        Require(Env(info, "HOOKSHOT_NGX_SDK") == null && Env(info, "HOOKSHOT_FFX_SDK") == null,
             "An SDK folder set on the PC must not reach the build: DLSS and FSR only when its arguments ask.");
-        foreach (var key in new[] { "LONGSHOT_JOBS", "LONGSHOT_MEM_LIMIT_GB" })
+        foreach (var key in new[] { "HOOKSHOT_JOBS", "HOOKSHOT_MEM_LIMIT_GB" })
             Require(Env(info, key) == Environment.GetEnvironmentVariable(key), key + " must be passed on as inherited.");
     }
 
@@ -64,7 +64,7 @@ static class Program
     {
         // Environment.SetEnvironmentVariable(key, "") may remove the variable on Windows instead of keeping it empty.
         // Start a real parent with an explicit empty environment entry, then exercise the actual Runner.Info inheritance.
-        Require(Environment.GetEnvironmentVariable("LONGSHOT_JOBS") == "", "The empty-parent fixture did not inherit an empty entry.");
+        Require(Environment.GetEnvironmentVariable("HOOKSHOT_JOBS") == "", "The empty-parent fixture did not inherit an empty entry.");
         var info = Info(tools, new[] { "--out", "authored output" });
         CheckInfo(info, tools, new[] { "--out", "authored output" });
         var value = await Delivery(info);
@@ -76,20 +76,20 @@ static class Program
         if (args.Length is < 1 or > 2) throw new Exception("Pass the Python executable for the authored child.");
         var emptyParent = args.Length == 2 && args[0] == "--empty-parent";
         var python = Path.GetFullPath(args[^1]);
-        var saved = new[] { "LONGSHOT_JOBS", "LONGSHOT_MEM_LIMIT_GB", "LONGSHOT_NGX_SDK", "LONGSHOT_FFX_SDK", "LONGSHOT_SETUP_BASE",
-                            "LONGSHOT_BUILDER_PORTABLE" }.ToDictionary(k => k, Environment.GetEnvironmentVariable);
-        var root = Path.Combine(Path.GetTempPath(), "longshot-builder-cli-" + Guid.NewGuid().ToString("N"));
+        var saved = new[] { "HOOKSHOT_JOBS", "HOOKSHOT_MEM_LIMIT_GB", "HOOKSHOT_NGX_SDK", "HOOKSHOT_FFX_SDK", "HOOKSHOT_SETUP_BASE",
+                            "HOOKSHOT_BUILDER_PORTABLE" }.ToDictionary(k => k, Environment.GetEnvironmentVariable);
+        var root = Path.Combine(Path.GetTempPath(), "hookshot-builder-cli-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(root, "nx2"));
-        Environment.SetEnvironmentVariable("LONGSHOT_SETUP_BASE", root);
-        Environment.SetEnvironmentVariable("LONGSHOT_BUILDER_PORTABLE", null);
+        Environment.SetEnvironmentVariable("HOOKSHOT_SETUP_BASE", root);
+        Environment.SetEnvironmentVariable("HOOKSHOT_BUILDER_PORTABLE", null);
         try
         {
             Require(BuilderHome.Base == root && !BuilderHome.Portable, "The fixture did not use its isolated standard home.");
             // This is authored test content, not the real pipeline, game files or a compiler invocation.
             File.WriteAllText(Path.Combine(root, "nx2", "make_game.py"), """
                 import json, os, sys
-                keys = ('LONGSHOT_JOBS', 'LONGSHOT_MEM_LIMIT_GB', 'LONGSHOT_NGX_SDK', 'LONGSHOT_FFX_SDK', 'LONGSHOT_SETUP_BASE')
-                print(json.dumps({'argv': sys.argv[1:], 'jobs': os.environ.get('LONGSHOT_JOBS'),
+                keys = ('HOOKSHOT_JOBS', 'HOOKSHOT_MEM_LIMIT_GB', 'HOOKSHOT_NGX_SDK', 'HOOKSHOT_FFX_SDK', 'HOOKSHOT_SETUP_BASE')
+                print(json.dumps({'argv': sys.argv[1:], 'jobs': os.environ.get('HOOKSHOT_JOBS'),
                                   'env': {k: os.environ.get(k) for k in keys}}), flush=True)
                 if '--authored-fail' in sys.argv:
                     print('@@error authored reason', flush=True)
@@ -114,27 +114,27 @@ static class Program
                 new[] { "--update", "authored existing game" },
                 new[] { "--prepare", "--game", "authored ü, game" },
             };
-            Environment.SetEnvironmentVariable("LONGSHOT_NGX_SDK", Path.Combine(root, "authored ngx"));
-            Environment.SetEnvironmentVariable("LONGSHOT_FFX_SDK", Path.Combine(root, "authored ffx"));
+            Environment.SetEnvironmentVariable("HOOKSHOT_NGX_SDK", Path.Combine(root, "authored ngx"));
+            Environment.SetEnvironmentVariable("HOOKSHOT_FFX_SDK", Path.Combine(root, "authored ffx"));
             foreach (var inherited in new string?[] { null, "4", "0", "not a number" })
             {
-                Environment.SetEnvironmentVariable("LONGSHOT_JOBS", inherited);
-                Environment.SetEnvironmentVariable("LONGSHOT_MEM_LIMIT_GB", inherited);
+                Environment.SetEnvironmentVariable("HOOKSHOT_JOBS", inherited);
+                Environment.SetEnvironmentVariable("HOOKSHOT_MEM_LIMIT_GB", inherited);
                 foreach (var command in sourceArguments)
                 {
                     var info = Info(tools, command);
                     CheckInfo(info, tools, command);
-                    Require(Environment.GetEnvironmentVariable("LONGSHOT_JOBS") == inherited, "Runner.Info changed its parent environment.");
+                    Require(Environment.GetEnvironmentVariable("HOOKSHOT_JOBS") == inherited, "Runner.Info changed its parent environment.");
                 }
                 var value = await Delivery(Info(tools, sourceArguments[3]));
                 Require(value.GetProperty("argv").EnumerateArray().Select(e => e.GetString()).SequenceEqual(sourceArguments[3]),
                     "The child's arguments changed.");
                 var env = value.GetProperty("env");
-                Require(env.GetProperty("LONGSHOT_JOBS").GetString() == inherited && env.GetProperty("LONGSHOT_MEM_LIMIT_GB").GetString() == inherited,
+                Require(env.GetProperty("HOOKSHOT_JOBS").GetString() == inherited && env.GetProperty("HOOKSHOT_MEM_LIMIT_GB").GetString() == inherited,
                     "The inherited build workers or memory did not reach the child unchanged.");
-                Require(env.GetProperty("LONGSHOT_NGX_SDK").ValueKind == JsonValueKind.Null && env.GetProperty("LONGSHOT_FFX_SDK").ValueKind == JsonValueKind.Null,
+                Require(env.GetProperty("HOOKSHOT_NGX_SDK").ValueKind == JsonValueKind.Null && env.GetProperty("HOOKSHOT_FFX_SDK").ValueKind == JsonValueKind.Null,
                     "An SDK folder set on the PC reached the child.");
-                Require(env.GetProperty("LONGSHOT_SETUP_BASE").GetString() == root, "The builder's home did not reach the child.");
+                Require(env.GetProperty("HOOKSHOT_SETUP_BASE").GetString() == root, "The builder's home did not reach the child.");
             }
 
             // (Runner.Start: every line, in order, then how it ended; Program.Cli turns that into its exit code and "error" line)
@@ -157,7 +157,7 @@ static class Program
             if (string.Equals(Path.GetFileNameWithoutExtension(Environment.ProcessPath), "dotnet", StringComparison.OrdinalIgnoreCase))
                 self.ArgumentList.Add(Assembly.GetExecutingAssembly().Location);
             self.ArgumentList.Add("--empty-parent"); self.ArgumentList.Add(python);
-            self.Environment["LONGSHOT_JOBS"] = "";
+            self.Environment["HOOKSHOT_JOBS"] = "";
             using var empty = Process.Start(self)!;
             var emptyOutput = await empty.StandardOutput.ReadToEndAsync();
             var emptyError = await empty.StandardError.ReadToEndAsync();

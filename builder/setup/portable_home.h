@@ -1,16 +1,16 @@
 /* Windows Builder home protocol. No cwd discovery, installation, UI or process launch here.
    The app uses the same marker format (BuilderHome.cs). */
-#ifndef LONGSHOT_PORTABLE_HOME_H
-#define LONGSHOT_PORTABLE_HOME_H
+#ifndef HOOKSHOT_PORTABLE_HOME_H
+#define HOOKSHOT_PORTABLE_HOME_H
 #include <windows.h>
 #include <string.h>
 #include <wchar.h>
 
-#define HB_HOME_MARKER L".longshot-portable"
-#define HB_HOME_MAGIC "Longshot Builder portable home v1"
-/* --portable's home beside the setup. Not LongshotBuilder: that is the builder the zip carries, beside the setup too, which the
+#define HB_HOME_MARKER L".hookshot-portable"
+#define HB_HOME_MAGIC "Hookshot Builder portable home v1"
+/* --portable's home beside the setup. Not HookshotBuilder: that is the builder the zip carries, beside the setup too, which the
    setup copies into the home's versions\<tag>; a home of that name would be copied into itself */
-#define HB_HOME_FOLDER L"LongshotBuilder-data"
+#define HB_HOME_FOLDER L"HookshotBuilder-data"
 
 typedef struct { wchar_t root[MAX_PATH]; int portable; } HbHome;
 

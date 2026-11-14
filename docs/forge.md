@@ -1,6 +1,6 @@
 # Working on git.magicbean.dev
 
-Longshot lives on the team's Forgejo, [git.magicbean.dev/MagicBeanDev/Longshot](https://git.magicbean.dev/MagicBeanDev/Longshot).
+Hookshot lives on the team's Forgejo, [git.magicbean.dev/MagicBeanDev/Hookshot](https://git.magicbean.dev/MagicBeanDev/Hookshot).
 Its `main` takes reviewed pull requests only. You work on branches of your own fork and open pull requests from there,
 as on GitHub.
 
@@ -18,11 +18,11 @@ python -I scripts/forge.py login
 
 It prints a link and opens it: click **Sign in with Discord** and approve. Then it:
 
-- adds the remote `forge` (MagicBeanDev/Longshot: fetch `main` from it, never push to it);
+- adds the remote `forge` (MagicBeanDev/Hookshot: fetch `main` from it, never push to it);
 - becomes git's credential helper for git.magicbean.dev only, so `git push`, `git fetch` and `jj git push` sign in by
   themselves. The token renews itself when it runs out.
 
-The sign-in is saved in your config folder (Linux `~/.config/longshot/`, Windows `%APPDATA%\Longshot\`), readable by
+The sign-in is saved in your config folder (Linux `~/.config/hookshot/`, Windows `%APPDATA%\Hookshot\`), readable by
 you only, never in the repository. `python -I scripts/forge.py whoami` shows who is signed in, and `logout` undoes it.
 
 ## Set up pushing
@@ -33,7 +33,7 @@ Reading, building and testing need only the sign-in. When you have something to 
 python -I scripts/forge.py fork
 ```
 
-It makes your fork, `<you>/Longshot`, if you have none, and adds the remote `forge-fork` for it: push your branches
+It makes your fork, `<you>/Hookshot`, if you have none, and adds the remote `forge-fork` for it: push your branches
 there. (`pr create` does this too if it hasn't been done.)
 
 ## A change, start to finish
@@ -156,10 +156,10 @@ fj's browser sign-in works only on servers it knows, and git.magicbean.dev isn't
 [git.magicbean.dev/user/settings/applications](https://git.magicbean.dev/user/settings/applications) (repository and
 issue access), then run `fj -H git.magicbean.dev auth add-token` and paste it. Inside the repository, fj finds the host
 from the remotes. For example, `fj pr create --base ^ "Title"` opens a pull request from your fork's branch into
-Longshot.
+Hookshot.
 
 ## If something goes wrong
 
 - `not signed in`, or git asks for a password: run `python -I scripts/forge.py login --again`.
-- `no branch ... on <you>/Longshot`: push the branch to `forge-fork` first.
-- A push to `forge` is refused: that is Longshot itself. Push to `forge-fork` and open a pull request.
+- `no branch ... on <you>/Hookshot`: push the branch to `forge-fork` first.
+- A push to `forge` is refused: that is Hookshot itself. Push to `forge-fork` and open a pull request.

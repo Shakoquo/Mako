@@ -49,8 +49,8 @@ def check_source(draw):
     slow = build.index("if (slow_full_build && test_slow_ms() > 0) std::this_thread::sleep_for(")
     if not build.index("fault_quarantine().begin(") < slow < build.index("graphics_with("):
         raise SystemExit("RX_VK_TEST_SLOW_MS does not hold the full build inside the driver-fault gate")
-    if "if (!quick_build) {   // (longshot: quick builds are counted apart" not in build or \
-            build.index("st_pipelines++;") < build.index("if (!quick_build) {   // (longshot: quick builds are counted apart"):
+    if "if (!quick_build) {   // (hookshot: quick builds are counted apart" not in build or \
+            build.index("st_pipelines++;") < build.index("if (!quick_build) {   // (hookshot: quick builds are counted apart"):
         raise SystemExit("a quick build is counted in st_pipelines")
     if "const VkPipelineCache cache = quick_build ? VK_NULL_HANDLE" not in build:
         raise SystemExit("a quick build goes into a pipeline cache")
@@ -92,7 +92,7 @@ def check_source(draw):
 
 def cut(draw):
     entry = between(draw, "struct PipeEntry {", "\n};\n") + "\n};\n"
-    code = between(draw, "/// (longshot) RX_VK_QUICK_MS, read once and logged", "\n// ---- samplers")
+    code = between(draw, "/// (hookshot) RX_VK_QUICK_MS, read once and logged", "\n// ---- samplers")
     return entry + code
 
 

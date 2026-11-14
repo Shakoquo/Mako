@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../builder/LongshotBuilder/Runner.cs" Link="Runner.cs"/>
-    <Compile Include="../../builder/LongshotBuilder/BuilderHome.cs" Link="BuilderHome.cs"/>
+    <Compile Include="../../builder/HookshotBuilder/Runner.cs" Link="Runner.cs"/>
+    <Compile Include="../../builder/HookshotBuilder/BuilderHome.cs" Link="BuilderHome.cs"/>
   </ItemGroup>
 </Project>

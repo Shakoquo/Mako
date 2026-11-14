@@ -53,7 +53,7 @@ def section(text, first, before):
 
 
 FIXTURE = r'''
-#include "gpu/vk/compat/longshot_env.h"
+#include "gpu/vk/compat/hookshot_env.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -392,7 +392,7 @@ def main():
     fixture = (FIXTURE
                .replace('@WBPAGES@', block(text, 'struct WbPages {'))
                .replace('@WBNOTE@', block(text, 'void wb_pages_note(uint64_t guest_lo, uint64_t guest_hi, uint64_t value, uint64_t part) {'))
-               .replace('@SECTION@', section(text, "// ---- the late pages' fix (longshot, 2026-11-13) ----", 'bool late_fix_pipe_ready() {'))
+               .replace('@SECTION@', section(text, "// ---- the late pages' fix (hookshot, 2026-11-13) ----", 'bool late_fix_pipe_ready() {'))
                .replace('@CAPTURE@', block(text, 'struct Capture {'))
                .replace('@BUILD@', block(text, 'bool late_fix_build(Capture& c) {'))
                .replace('@SHADOWS_FREED@', block(text, 'void late_fix_shadows_freed() {')))

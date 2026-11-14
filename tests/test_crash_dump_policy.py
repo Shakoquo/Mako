@@ -116,7 +116,7 @@ def main():
     source = (ROOT / "host/hos_crash_record.c").read_text(encoding="utf-8")
     worker = block(source, "static DWORD WINAPI dump_main(")
     fixture = HEAD + block(source, "static BOOL CALLBACK dump_filter(") + block(source, "static int dump_path(") + worker + MAIN
-    with tempfile.TemporaryDirectory(prefix="longshot-dump-policy-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="hookshot-dump-policy-") as tmp:
         src, exe = Path(tmp) / "dump.c", Path(tmp) / "dump.exe"
         src.write_text(fixture, encoding="utf-8")
         subprocess.run([args.cc, "-std=c11", "-O1", "-Wall", "-Wextra", "-Werror", str(src), "-o", str(exe)],

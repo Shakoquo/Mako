@@ -7,7 +7,7 @@
 #
 # Forgejo 17 has no ready_for_review event: marking a PR ready takes WIP: off its title, which is an edit.
 # (Forgejo reads only the first of .forgejo/, .gitea/ and .github/workflows that exists: this file runs once every
-# workflow has moved here, MagicBeanDev/Longshot#13, and a runner serves the repository.)
+# workflow has moved here, MagicBeanDev/Hookshot#13, and a runner serves the repository.)
 name: PR description
 
 on:

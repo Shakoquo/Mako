@@ -8,12 +8,12 @@ body:
       value: |
         **The fastest way:** in the game, press Insert, then **Gameplay → Bug report**. It writes a folder with the answers below, both logs and a picture; open the link at the end of its `report.txt` (it fills in the first fields) and drag the folder's files in.
 
-        Before you start: try the [newest release](https://git.magicbean.dev/MagicBeanDev/Longshot/releases), search the [open issues](https://git.magicbean.dev/MagicBeanDev/Longshot/issues) (add to one that matches), and write in English. **Never attach game files or saves.**
+        Before you start: try the [newest release](https://git.magicbean.dev/MagicBeanDev/Hookshot/releases), search the [open issues](https://git.magicbean.dev/MagicBeanDev/Hookshot/issues) (add to one that matches), and write in English. **Never attach game files or saves.**
   - type: input
     id: version
     attributes:
-      label: Longshot version
-      description: The first line of `longshot_log.txt` (after `longshot`), or the version the launcher shows.
+      label: Hookshot version
+      description: The first line of `hookshot_log.txt` (after `hookshot`), or the version the launcher shows.
       placeholder: v3.0.0
     validations:
       required: true
@@ -21,7 +21,7 @@ body:
     id: track
     attributes:
       label: Channel
-      description: The Longshot Launcher's channel you installed from.
+      description: The Hookshot Launcher's channel you installed from.
       options:
         - Release
         - Release candidate
@@ -85,12 +85,12 @@ body:
     id: settings
     attributes:
       label: Changes from the defaults
-      description: Insert-menu options you changed, the lines of `longshot_env.txt` if you have one, and any overlay, ReShade, shader-cache tool or frame-generation injector hooked into the game (test without them first). Leave empty if none.
+      description: Insert-menu options you changed, the lines of `hookshot_env.txt` if you have one, and any overlay, ReShade, shader-cache tool or frame-generation injector hooked into the game (test without them first). Leave empty if none.
   - type: textarea
     id: log
     attributes:
-      label: longshot_log.txt
-      description: Drag the file here. It is in the `logs` folder of your game folder and holds the last run; `longshot_log.1.txt` is the run before. If you started the game again after the problem, attach that one too. Logs hold no game files.
+      label: hookshot_log.txt
+      description: Drag the file here. It is in the `logs` folder of your game folder and holds the last run; `hookshot_log.1.txt` is the run before. If you started the game again after the problem, attach that one too. Logs hold no game files.
     validations:
       required: true
   - type: textarea

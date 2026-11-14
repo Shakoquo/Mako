@@ -1,17 +1,17 @@
-/* LongshotBuilder.exe in LongshotBuilder-<version>-windows-x64.zip (docs/releases.md): installs the Longshot Builder the zip
-   carries, with the build tools tools.lock names, and starts it. It looks for no release itself: the Longshot Launcher
-   (MagicBeanDev/LongshotLauncher) installs and updates the builder from Longshot's releases, and RecompLauncher runs this.
+/* HookshotBuilder.exe in HookshotBuilder-<version>-windows-x64.zip (docs/releases.md): installs the Hookshot Builder the zip
+   carries, with the build tools tools.lock names, and starts it. It looks for no release itself: the Hookshot Launcher
+   (MagicBeanDev/HookshotLauncher) installs and updates the builder from Hookshot's releases, and RecompLauncher runs this.
    The builder has no window: only --cli installs and starts it, --play starts a built game, and this file as a game folder's
-   longshot.exe starts that game. Started any other way (by hand), it says to get the Longshot Launcher and does nothing else.
-   The zip holds this setup, LongshotBuilder\ (the builder and Longshot's sources), tools.lock and VERSION: the builder is
-   copied into %LOCALAPPDATA%\LongshotBuilder\versions\<version>, and each tool of tools.lock (`tool <name> <version> <system>
+   hookshot.exe starts that game. Started any other way (by hand), it says to get the Hookshot Launcher and does nothing else.
+   The zip holds this setup, HookshotBuilder\ (the builder and Hookshot's sources), tools.lock and VERSION: the builder is
+   copied into %LOCALAPPDATA%\HookshotBuilder\versions\<version>, and each tool of tools.lock (`tool <name> <version> <system>
    <sha256> <size> <dest> <prefix> <url> [<url>]`) is downloaded from the first URL that answers, checked by its SHA-256,
    and its <prefix> folder unpacked as <dest> (merged, file by file, into a <dest> the builder's zip has already: place_tool).
    A tool an installed version has is moved over, not downloaded again.
    Tools are unpacked with Windows' own tar.exe. Files fetched by a program carry no "downloaded from the internet" mark,
    and the download itself holds no scripts, which is what antivirus programs' machine-learning guesses
    (Trojan:Script/...!ml) fired on.
-   Build: clang -O2 -mwindows -municode setup.c setup_rc.o -lwinhttp -lbcrypt -lcomctl32 -lshell32 -lole32 -o LongshotBuilder-Setup.exe */
+   Build: clang -O2 -mwindows -municode setup.c setup_rc.o -lwinhttp -lbcrypt -lcomctl32 -lshell32 -lole32 -o HookshotBuilder-Setup.exe */
 #define WIN32_LEAN_AND_MEAN
 #ifndef UNICODE
 #define UNICODE
@@ -38,7 +38,7 @@ static wchar_t g_status[512];
 static volatile LONG g_percent = -1;
 static DWORD g_http_status;   /* (the last answer: 0 when the server was not reached) */
 static wchar_t g_cmdline[2048];
-static wchar_t g_app[MAX_PATH];   /* (LongshotBuilder\ beside this setup, the builder its zip carries) */
+static wchar_t g_app[MAX_PATH];   /* (HookshotBuilder\ beside this setup, the builder its zip carries) */
 static HbHome g_home;
 static int g_home_ok;
 /* (RecompLauncher) --cli <make_game.py's options>: no window, the builder's lines on this process's stdout and stderr, its exit code
@@ -103,7 +103,7 @@ static void fail(const wchar_t *fmt, ...) {
     vswprintf(msg, 1024, fmt, ap);
     va_end(ap);
     if (g_headless) say_error(msg), ExitProcess(1);
-    MessageBoxW(g_win, msg, L"Longshot Builder setup", MB_OK | MB_ICONERROR);
+    MessageBoxW(g_win, msg, L"Hookshot Builder setup", MB_OK | MB_ICONERROR);
     PostMessageW(g_win, WM_DONE, 1, 0);
     ExitThread(1);
 }
@@ -130,8 +130,8 @@ static int http_get(const char *url8, Sink sink, void *user, unsigned long long 
     uc.lpszHostName = host, uc.dwHostNameLength = 256;
     uc.lpszUrlPath = path, uc.dwUrlPathLength = 1024;
     if (!WinHttpCrackUrl(url, 0, 0, &uc)) return 0;
-    HINTERNET s = WinHttpOpen(L"LongshotBuilder-Setup/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, NULL, NULL, 0);
-    if (!s) s = WinHttpOpen(L"LongshotBuilder-Setup/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, NULL, NULL, 0);
+    HINTERNET s = WinHttpOpen(L"HookshotBuilder-Setup/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, NULL, NULL, 0);
+    if (!s) s = WinHttpOpen(L"HookshotBuilder-Setup/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, NULL, NULL, 0);
     if (!s) return 0;
     /* (a stalled download fails after a minute without data, with the message, instead of waiting forever: a GitHub 504 hour) */
     WinHttpSetTimeouts(s, 30000, 30000, 30000, 60000);
@@ -290,9 +290,9 @@ static int portable_prefix(wchar_t *command) {
 static int init_home(int portable) {
     wchar_t self[MAX_PATH], requested[MAX_PATH] = L"", standard[MAX_PATH] = L"", profile[MAX_PATH];
     DWORD n = GetModuleFileNameW(NULL, self, MAX_PATH);
-    if (!n || n >= MAX_PATH || GetEnvironmentVariableW(L"LONGSHOT_SETUP_BASE", requested, MAX_PATH) >= MAX_PATH) return 0;
+    if (!n || n >= MAX_PATH || GetEnvironmentVariableW(L"HOOKSHOT_SETUP_BASE", requested, MAX_PATH) >= MAX_PATH) return 0;
     if (SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, profile) == S_OK)
-        hb_home_join(standard, MAX_PATH, profile, L"LongshotBuilder");   /* an explicit/portable home needs no AppData */
+        hb_home_join(standard, MAX_PATH, profile, L"HookshotBuilder");   /* an explicit/portable home needs no AppData */
     if (portable) {
         if (*requested) {
             if (!hb_home_full(g_home.root, requested)) return 0;
@@ -310,11 +310,11 @@ static int init_home(int portable) {
         g_home.portable = 1;
     } else if (!hb_home_discover(&g_home, requested, self, standard)) return 0;
     wchar_t inherited[3] = L"";
-    if (GetEnvironmentVariableW(L"LONGSHOT_BUILDER_PORTABLE", inherited, 3) == 1 &&
+    if (GetEnvironmentVariableW(L"HOOKSHOT_BUILDER_PORTABLE", inherited, 3) == 1 &&
         inherited[0] == L'1' && !g_home.portable) return 0;
     /* Only this setup and the children it starts: no user/system environment or registry change. */
-    return SetEnvironmentVariableW(L"LONGSHOT_SETUP_BASE", g_home.root) &&
-           SetEnvironmentVariableW(L"LONGSHOT_BUILDER_PORTABLE", g_home.portable ? L"1" : NULL);
+    return SetEnvironmentVariableW(L"HOOKSHOT_SETUP_BASE", g_home.root) &&
+           SetEnvironmentVariableW(L"HOOKSHOT_BUILDER_PORTABLE", g_home.portable ? L"1" : NULL);
 }
 
 /* a folder and everything in it (a version folder, a half-unpacked one): p, n characters, long_path's form; a link is removed,
@@ -401,7 +401,7 @@ static int copy_tree_at(wchar_t *src, size_t ns, wchar_t *dst, size_t nd, int de
    is moved over from it instead of downloaded: that version is deleted after the install anyway) */
 /* Portable updates keep the old installation usable until publication; copied parts belong only to staging. */
 /* (paths past MAX_PATH: the builder zip's deepest file is 163 characters below its folder, so a zip unpacked a little deep
-   failed here with "Could not copy the Longshot Builder": long_path.h. A folder copied into itself, or under itself, is
+   failed here with "Could not copy the Hookshot Builder": long_path.h. A folder copied into itself, or under itself, is
    refused before anything is written: it would copy its own copy again, level after level, until the disk is full) */
 static int copy_part_tree(const wchar_t *from, const wchar_t *to) {
     wchar_t *buf = malloc(2 * LONG_PATH * sizeof *buf);
@@ -430,7 +430,7 @@ static int publish_install(const wchar_t *staged, const wchar_t *final, int port
 }
 
 /* A tool's unpacked <prefix> folder (from), checked by its SHA-256 before it was unpacked, made <dest> (to) in the staged
-   install. A <dest> the builder's own zip already has (LongshotBuilder\tools\third_party: the repository's sources, among which
+   install. A <dest> the builder's own zip already has (HookshotBuilder\tools\third_party: the repository's sources, among which
    the third-party tool's prebuilt files go, a64-kit\lift\a64emit.dll beside a64emit.cpp) gets the tool's files merged in, file
    by file: a file both have is refused, never replaced, and so is a link on either side. A refusal can leave half of the files
    moved, but only in versions\<tag>.part, which is published once complete and removed by the next run: never a partial
@@ -566,7 +566,7 @@ static int retryable(DWORD status) {
    Keep this startup contract in step with the publish format; this is not an integrity check of every assembly. */
 static int builder_ready(const wchar_t *exe) {
     static const wchar_t *const required[] = {
-        L"LongshotBuilder.dll", L"LongshotBuilder.deps.json", L"LongshotBuilder.runtimeconfig.json",
+        L"HookshotBuilder.dll", L"HookshotBuilder.deps.json", L"HookshotBuilder.runtimeconfig.json",
         L"hostfxr.dll", L"hostpolicy.dll", L"coreclr.dll", L"System.Private.CoreLib.dll"
     };
     wchar_t path[MAX_PATH];
@@ -588,7 +588,7 @@ static int builder_ready(const wchar_t *exe) {
     return 1;
 }
 
-#define LAUNCHER_DOWNLOAD L"https://longshot.magicbean.dev/download"
+#define LAUNCHER_DOWNLOAD L"https://hookshot.magicbean.dev/download"
 
 static DWORD WINAPI work(LPVOID unused) {
     (void)unused;
@@ -608,22 +608,22 @@ static DWORD WINAPI work(LPVOID unused) {
         if (slash && (size_t)(slash + 1 - list) + 20 < MAX_PATH) wcscpy(slash + 1, L"tools.lock");
         HANDLE h = slash ? CreateFileW(list, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL) : INVALID_HANDLE_VALUE;
         if (h == INVALID_HANDLE_VALUE)
-            fail(L"No tools.lock beside this setup: unpack the whole LongshotBuilder zip, or get the Longshot Launcher from " LAUNCHER_DOWNLOAD);
+            fail(L"No tools.lock beside this setup: unpack the whole HookshotBuilder zip, or get the Hookshot Launcher from " LAUNCHER_DOWNLOAD);
         char buf[4096];
         DWORD got;
         while (ReadFile(h, buf, sizeof buf, &got, NULL) && got && man.n < (1 << 20)) mem_sink(&man, buf, got);
         CloseHandle(h);
         if (!man.p) fail(L"The tools.lock beside this setup is empty.");
-        /* (the version: VERSION beside it, one line; the builder: LongshotBuilder\ beside it) */
+        /* (the version: VERSION beside it, one line; the builder: HookshotBuilder\ beside it) */
         char version[128] = "";
         wcscpy(slash + 1, L"VERSION");
         read_small(list, version, sizeof version);
         version[strcspn(version, "\r\n ")] = 0;
-        if (!version[0]) fail(L"No VERSION beside this setup: unpack the whole LongshotBuilder zip again.");
+        if (!version[0]) fail(L"No VERSION beside this setup: unpack the whole HookshotBuilder zip again.");
         char head[256];
-        snprintf(head, sizeof head, "tag %s\nrun LongshotBuilder/LongshotBuilder.exe\n", version);
+        snprintf(head, sizeof head, "tag %s\nrun HookshotBuilder/HookshotBuilder.exe\n", version);
         mem_sink(&man, head, (DWORD)strlen(head));
-        wcscpy(slash + 1, L"LongshotBuilder");
+        wcscpy(slash + 1, L"HookshotBuilder");
         wcscpy(g_app, list);
     }
     /* (a tool's download is tried again on a server error or no answer: 8 tries over ~3 minutes) */
@@ -673,15 +673,15 @@ static DWORD WINAPI work(LPVOID unused) {
         mkdirs(install);
         {   /* (the builder the zip carries, beside this setup) */
             wchar_t app[MAX_PATH];
-            status(L"Copying the Longshot Builder...");
-            home_path(app, L"%ls\\LongshotBuilder", install);
-            /* (a LongshotBuilder\ that is a portable home: an earlier setup's --portable made its home there, where the zip's
+            status(L"Copying the Hookshot Builder...");
+            home_path(app, L"%ls\\HookshotBuilder", install);
+            /* (a HookshotBuilder\ that is a portable home: an earlier setup's --portable made its home there, where the zip's
                builder is. It is never copied: its versions\ would go into each version, and its marker would make the installed
                builder its own home) */
             if (hb_home_marked(g_app))
                 fail(L"%ls is a portable Builder home as well as the builder this zip carries. Unpack the whole zip into a new "
                      L"folder and start the setup with --portable there.", g_app);
-            if (!copy_part_tree(g_app, app)) fail(L"Could not copy the Longshot Builder from %ls (unpack the whole zip again).", g_app);
+            if (!copy_part_tree(g_app, app)) fail(L"Could not copy the Hookshot Builder from %ls (unpack the whole zip again).", g_app);
         }
         for (int i = 0; i < nparts; i++) {
             Part *p = &parts[i];
@@ -711,7 +711,7 @@ static DWORD WINAPI work(LPVOID unused) {
                     BCryptOpenAlgorithmProvider(&a, BCRYPT_SHA256_ALGORITHM, NULL, 0);
                     BCryptCreateHash(a, &fs.h, NULL, 0, NULL, 0, 0);
                     g_http_status = 0;
-                    /* (a tool's second URL, where it came from, every other try; its first is Longshot's package) */
+                    /* (a tool's second URL, where it came from, every other try; its first is Hookshot's package) */
                     got = http_get(attempt % 2 == 1 && p->url2[0] ? p->url2 : p->url, file_sink, &fs, p->size, NULL);
                     CloseHandle(fs.f);
                     unsigned char d[32];
@@ -804,7 +804,7 @@ static DWORD WINAPI work(LPVOID unused) {
     prune(versions, downloads, tag, parts, nparts);
     rmtree(downloads);   /* (installed: its zips are not kept; an update moves unchanged folders over instead, reuse_part) */
 
-    status(L"Starting the Longshot Builder...");
+    status(L"Starting the Hookshot Builder...");
     wchar_t cmd[4096], dir[MAX_PATH];
     wcscpy(dir, exe);
     wchar_t *slash = wcsrchr(dir, L'\\');
@@ -844,7 +844,7 @@ static LRESULT CALLBACK wndproc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     return DefWindowProcW(h, msg, wp, lp);
 }
 
-/* (RecompLauncher's Play) --play <game folder>: bin\longshot.exe there, started like the game folder's launcher starts it but without
+/* (RecompLauncher's Play) --play <game folder>: bin\hookshot.exe there, started like the game folder's launcher starts it but without
    its update question, and waited for, so the launcher knows when the session ends. */
 static int play_folder(const wchar_t *args) {
     wchar_t folder[MAX_PATH], cmd[MAX_PATH + 32];
@@ -853,14 +853,14 @@ static int play_folder(const wchar_t *args) {
     size_t k = 0;
     for (args += quoted; *args && !(quoted ? *args == L'"' : *args == L' ') && k + 1 < MAX_PATH; ) folder[k++] = *args++;
     folder[k] = 0;
-    swprintf(cmd, MAX_PATH + 32, L"\"%ls\\bin\\longshot.exe\"", folder);
-    _wputenv_s(L"LONGSHOT_NO_UPDATE_CHECK", L"1");
+    swprintf(cmd, MAX_PATH + 32, L"\"%ls\\bin\\hookshot.exe\"", folder);
+    _wputenv_s(L"HOOKSHOT_NO_UPDATE_CHECK", L"1");
     STARTUPINFOW si = {sizeof si};
     PROCESS_INFORMATION pi;
     DWORD code = 1;
     if (!k || !CreateProcessW(NULL, cmd, NULL, NULL, FALSE, 0, NULL, folder, &si, &pi)) {
         g_headless = 1;
-        say_error(L"No built game to start. Build it first (the game folder needs bin\\longshot.exe).");
+        say_error(L"No built game to start. Build it first (the game folder needs bin\\hookshot.exe).");
         return 1;
     }
     WaitForSingleObject(pi.hProcess, INFINITE), GetExitCodeProcess(pi.hProcess, &code);
@@ -881,16 +881,16 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmdline, int show) {
         if (!wcsncmp(c, L"--play", 6) && (c[6] == L' ' || !c[6])) return play_folder(c + 6);
         if (!wcsncmp(c, L"--cli", 5) && (c[5] == L' ' || !c[5])) g_headless = 1, show = SW_HIDE;
     }
-    {   /* (the game folder's launcher, longshot.exe there (nx2/make_game.py copies this file): the game, bin\longshot.exe, at once) */
+    {   /* (the game folder's launcher, hookshot.exe there (nx2/make_game.py copies this file): the game, bin\hookshot.exe, at once) */
         wchar_t self[MAX_PATH];
         GetModuleFileNameW(NULL, self, MAX_PATH);
         const wchar_t *name = wcsrchr(self, L'\\');
         name = name ? name + 1 : self;
-        if (!_wcsicmp(name, L"longshot.exe") && !wcsstr(g_cmdline, L"--")) {
+        if (!_wcsicmp(name, L"hookshot.exe") && !wcsstr(g_cmdline, L"--")) {
             wchar_t *slash = wcsrchr(self, L'\\');
             if (slash) *slash = 0;
             wchar_t game[MAX_PATH], cmd[MAX_PATH + 4];
-            home_path(game, L"%ls\\bin\\longshot.exe", self);
+            home_path(game, L"%ls\\bin\\hookshot.exe", self);
             swprintf(cmd, MAX_PATH + 4, L"\"%ls\"", game);
             STARTUPINFOW si = {sizeof si};
             PROCESS_INFORMATION pi;
@@ -898,14 +898,14 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmdline, int show) {
                 CloseHandle(pi.hThread), CloseHandle(pi.hProcess);
                 return 0;
             }
-            MessageBoxW(NULL, L"The game (bin\\longshot.exe) is missing from this folder. Build it again with the Longshot Launcher.", L"Longshot",
+            MessageBoxW(NULL, L"The game (bin\\hookshot.exe) is missing from this folder. Build it again with the Hookshot Launcher.", L"Hookshot",
                         MB_ICONERROR);
             return 1;
         }
     }
     if (!g_headless) {   /* (started by hand: the builder has no window to install and open) */
-        MessageBoxW(NULL, L"The Longshot Builder has no window of its own: the Longshot Launcher builds the game and starts it. "
-                          L"Get the launcher from " LAUNCHER_DOWNLOAD, L"Longshot Builder", MB_OK | MB_ICONINFORMATION);
+        MessageBoxW(NULL, L"The Hookshot Builder has no window of its own: the Hookshot Launcher builds the game and starts it. "
+                          L"Get the launcher from " LAUNCHER_DOWNLOAD, L"Hookshot Builder", MB_OK | MB_ICONINFORMATION);
         return 1;
     }
     g_home_ok = init_home(portable);
@@ -917,13 +917,13 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmdline, int show) {
     INITCOMMONCONTROLSEX icc = {sizeof icc, ICC_PROGRESS_CLASS};
     InitCommonControlsEx(&icc);
     WNDCLASSW wc = {0};
-    wc.lpfnWndProc = wndproc, wc.hInstance = inst, wc.lpszClassName = L"LongshotSetup";
+    wc.lpfnWndProc = wndproc, wc.hInstance = inst, wc.lpszClassName = L"HookshotSetup";
     wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(1));
     wc.hCursor = LoadCursorW(NULL, (LPCWSTR)IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     RegisterClassW(&wc);
     const int ww = 460, wh = 140;
-    g_win = CreateWindowW(L"LongshotSetup", L"Longshot Builder setup", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+    g_win = CreateWindowW(L"HookshotSetup", L"Hookshot Builder setup", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
                           (GetSystemMetrics(SM_CXSCREEN) - ww) / 2, (GetSystemMetrics(SM_CYSCREEN) - wh) / 2, ww, wh, NULL, NULL, inst, NULL);
     g_text = CreateWindowW(L"STATIC", L"Starting...", WS_CHILD | WS_VISIBLE, 16, 16, ww - 48, 22, g_win, NULL, inst, NULL);
     g_bar = CreateWindowW(PROGRESS_CLASSW, NULL, WS_CHILD | WS_VISIBLE | PBS_MARQUEE, 16, 48, ww - 48, 20, g_win, NULL, inst, NULL);

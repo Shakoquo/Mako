@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 
-namespace LongshotBuilder;
+namespace HookshotBuilder;
 
 /// Where nx2/make_game.py and its Python are: a "tools" folder beside the app when packaged, or the source tree it sits in.
 sealed record Tools(string Root, string Python, string[]? PythonArgs = null)
@@ -95,13 +95,13 @@ sealed class Runner
             RedirectStandardError = true,
         };
         si.Environment["PYTHONIOENCODING"] = "utf-8";
-        // (written into the game folder's longshot_version.txt: the builder that made the game)
+        // (written into the game folder's hookshot_version.txt: the builder that made the game)
         BuilderHome.PassTo(si);
-        if (Environment.ProcessPath != null) si.Environment["LONGSHOT_BUILDER_EXE"] = Environment.ProcessPath;
+        if (Environment.ProcessPath != null) si.Environment["HOOKSHOT_BUILDER_EXE"] = Environment.ProcessPath;
         // (NVIDIA DLSS and AMD FSR 4: a build is with them only when its arguments ask (--fetch-ngx-sdk, --fetch-fsr-runtime);
         // an SDK folder set on the PC is not passed on)
-        si.Environment.Remove("LONGSHOT_NGX_SDK");
-        si.Environment.Remove("LONGSHOT_FFX_SDK");
+        si.Environment.Remove("HOOKSHOT_NGX_SDK");
+        si.Environment.Remove("HOOKSHOT_FFX_SDK");
         // (the folder's own compiler, headers and libraries, when it has them: nothing of the PC's but Windows' own)
         var sets = new[] { ("EMSDK", "emsdk"), ("RX_CPM", "cpm"), ("WGPU_NATIVE", "wgpu-native") };
         foreach (var (name, folder) in sets)

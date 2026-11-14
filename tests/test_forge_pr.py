@@ -71,7 +71,7 @@ class Forgejo:
         self.prs[number] = {"number": number, "title": title, "body": body, "state": "open", "merged": False,
                             "mergeable": True, "user": {"login": "alice"}, "head": {"label": "alice:fix"},
                             "base": {"ref": "main"}, "labels": [l for l in self.labels if l["name"] in labels],
-                            "html_url": "https://git.magicbean.dev/MagicBeanDev/Longshot/pulls/%d" % number}
+                            "html_url": "https://git.magicbean.dev/MagicBeanDev/Hookshot/pulls/%d" % number}
         self.prs[number]["draft"] = self.draft(title)
         self.comments[number] = []
         return self.prs[number]
@@ -81,10 +81,10 @@ class Forgejo:
 
     def __call__(self, method, path, body=None):
         self.calls.append((method, path, body))
-        base = "/repos/MagicBeanDev/Longshot"
+        base = "/repos/MagicBeanDev/Hookshot"
         if method == "GET" and path == "/user":
             return {"login": "alice"}
-        if method == "GET" and path.startswith("/repos/alice/Longshot/branches/"):
+        if method == "GET" and path.startswith("/repos/alice/Hookshot/branches/"):
             return {"name": path.rsplit("/", 1)[1]}
         assert path.startswith(base), path
         path = path[len(base):]
@@ -141,7 +141,7 @@ class Forgejo:
         """forge.api_upload: a picture put up as an attachment of a comment"""
         self.calls.append(("POST", path, {"name": name, "bytes": data, "content_type": content_type}))
         where, _, query = path.partition("?name=")
-        assert where.startswith("/repos/MagicBeanDev/Longshot/issues/comments/") and where.endswith("/assets"), path
+        assert where.startswith("/repos/MagicBeanDev/Hookshot/issues/comments/") and where.endswith("/assets"), path
         assert urllib.parse.unquote(query) == name, path   # (the real name, which Forgejo takes before the form's)
         self.comment(int(where.split("/")[-2]))
         if name in self.refuse:
@@ -170,7 +170,7 @@ class PR(unittest.TestCase):
                         mock.patch.object(forge, "api_upload", self.forgejo.upload),
                         # (the login saved at sign-in, from before the account was renamed: the server's is the one used)
                         mock.patch.object(forge, "token", lambda: {"login": "alice-before", "access_token": "t"}),
-                        mock.patch.object(forge, "ensure_fork", lambda login: ("%s/Longshot" % login, False)),
+                        mock.patch.object(forge, "ensure_fork", lambda login: ("%s/Hookshot" % login, False)),
                         mock.patch.object(forge.auth, "forge_request", no_network),
                         mock.patch.object(forge.auth, "forge_session", no_network),
                         mock.patch.object(forge.urllib.request, "urlopen", no_network)]
@@ -279,7 +279,7 @@ class PR(unittest.TestCase):
         self.assertEqual(code, 0, err)   # (the Flags note never stops it, nor does a warning)
         self.assertIn("warning: the diff adds RX_VK_NEW_THING, which ## Flags and settings does not list", err)
         self.assertIn("warning: measured on main 7afe6ae1, but the PR is now on main 01234567", err)
-        self.assertIn(("GET", "/repos/MagicBeanDev/Longshot/pulls/5.diff", None), self.forgejo.calls)
+        self.assertIn(("GET", "/repos/MagicBeanDev/Hookshot/pulls/5.diff", None), self.forgejo.calls)
 
     def test_ready_waits_for_the_test_requests(self):
         body = FILLED.replace("(T-9MZ4)", "(request to open)")
@@ -399,7 +399,7 @@ class PR(unittest.TestCase):
         code, out, err = self.run_forge("pr", "comment", "5", text)
         self.assertEqual((code, err), (0, ""))
         self.assertEqual(self.forgejo.writes(),
-                         [("POST", "/repos/MagicBeanDev/Longshot/issues/5/comments", {"body": text})])
+                         [("POST", "/repos/MagicBeanDev/Hookshot/issues/5/comments", {"body": text})])
         self.assertEqual(out, self.forgejo.comments[5][0]["html_url"] + "\n")
 
     def test_comment_attach_shows_the_pictures(self):
@@ -414,9 +414,9 @@ class PR(unittest.TestCase):
         comment = self.forgejo.comments[5][0]
         writes = self.forgejo.writes()
         self.assertEqual([(m, p.split("?")[0]) for m, p, _ in writes],
-                         [("POST", "/repos/MagicBeanDev/Longshot/issues/5/comments")]
-                         + [("POST", "/repos/MagicBeanDev/Longshot/issues/comments/%d/assets" % comment["id"])] * 3
-                         + [("PATCH", "/repos/MagicBeanDev/Longshot/issues/comments/%d" % comment["id"])])
+                         [("POST", "/repos/MagicBeanDev/Hookshot/issues/5/comments")]
+                         + [("POST", "/repos/MagicBeanDev/Hookshot/issues/comments/%d/assets" % comment["id"])] * 3
+                         + [("PATCH", "/repos/MagicBeanDev/Hookshot/issues/comments/%d" % comment["id"])])
         self.assertEqual([(b["name"], b["content_type"]) for _, _, b in writes[1:4]],
                          [("main-21x9.png", "image/png"), ("kokiri.jpg", "image/jpeg"), ("extra.webp", "image/webp")])
         self.assertEqual([b["bytes"] for _, _, b in writes[1:4]], [PNG, JPEG, WEBP], "each file whole, once")
@@ -451,8 +451,8 @@ class PR(unittest.TestCase):
         for paths, want in (([missing], "missing.png: no such file"),
                             ([os.path.join(self.tmp, "folder.png")], "folder.png: not a file"),
                             ([nso], "main.nso: not a picture by its name"),
-                            ([self.picture("longshot_programs.bin", PNG)],
-                             "longshot_programs.bin: not a picture by its name"),
+                            ([self.picture("hookshot_programs.bin", PNG)],
+                             "hookshot_programs.bin: not a picture by its name"),
                             ([self.picture("dump.png", b"\x7fELF" + bytes(60))],
                              "dump.png: named as a PNG, but its bytes are no picture's"),
                             ([self.picture("photo.png", JPEG)],
@@ -486,7 +486,7 @@ class PR(unittest.TestCase):
         self.assertEqual(out.splitlines(), [comment["html_url"]], "the link first: the comment is there")
         for want in ("the comment is posted, but not all its pictures show: " + comment["html_url"],
                      "  uploaded: a.png",
-                     "  failed: b.png (POST /repos/MagicBeanDev/Longshot/issues/comments/1/assets: HTTP 500",
+                     "  failed: b.png (POST /repos/MagicBeanDev/Hookshot/issues/comments/1/assets: HTTP 500",
                      "  not tried: c.png", "the others still read attach:NAME", "Don't post it again",
                      "pr comment 5 --attach FILE"):
             self.assertIn(want, err)
@@ -522,12 +522,12 @@ class PR(unittest.TestCase):
                 mock.patch.object(forge.urllib.request, "urlopen", urlopen):
             self.assertEqual(forge.upload_picture(12, "Zélda 1.png", PNG, "image/png"), ATTACHMENT % 1)
             (req, timeout), = sent
-            self.assertEqual(req.full_url, "https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Longshot/issues/"
+            self.assertEqual(req.full_url, "https://git.magicbean.dev/api/v1/repos/MagicBeanDev/Hookshot/issues/"
                                            "comments/12/assets?name=Z%C3%A9lda%201.png")
             self.assertEqual((req.get_method(), req.get_header("User-agent"), req.get_header("Authorization")),
                              ("POST", forge.auth.USER_AGENT, "Bearer t"))
             ctype = req.get_header("Content-type")
-            self.assertTrue(ctype.startswith("multipart/form-data; boundary=longshot-"), ctype)
+            self.assertTrue(ctype.startswith("multipart/form-data; boundary=hookshot-"), ctype)
             form = email.parser.BytesParser(policy=email.policy.HTTP).parsebytes(
                 b"Content-Type: " + ctype.encode() + b"\r\n\r\n" + req.data)
             part, = form.iter_parts()
@@ -597,9 +597,9 @@ deleted file mode 100644
         code, out, err = self.run_forge("pr", "review", "5", "--approve", "--body", "Looks right.", "--inline", inline,
                                         "--at", "gpu/vk/a.cpp:12", "c is never read", "--at", "old.txt:-2", "fine")
         self.assertEqual(code, 0, err)
-        self.assertIn("approved, 4 inline comments: https://git.magicbean.dev/MagicBeanDev/Longshot/pulls/5#issuecomment-101", out)
+        self.assertIn("approved, 4 inline comments: https://git.magicbean.dev/MagicBeanDev/Hookshot/pulls/5#issuecomment-101", out)
         (method, path, body), = self.forgejo.writes()
-        self.assertEqual((method, path), ("POST", "/repos/MagicBeanDev/Longshot/pulls/5/reviews"))
+        self.assertEqual((method, path), ("POST", "/repos/MagicBeanDev/Hookshot/pulls/5/reviews"))
         self.assertEqual((body["event"], body["body"], body["commit_id"]), ("APPROVED", "Looks right.", "abc123" + "0" * 34))
         self.assertEqual(body["comments"], [
             {"path": "docs/new.md", "body": "typo", "new_position": 2, "old_position": 0},

@@ -1211,7 +1211,7 @@ def main():
     body = body.replace("budget--;", "budget--; scan_visits++; scan_probe();")
     body = body.replace("static int state_scan(uint64_t mgr, StateChanges *out) {",
                         "static int state_scan(uint64_t mgr, StateChanges *out) { scan_calls++;")
-    spec = importlib.util.spec_from_file_location("state_tap_client", ROOT / "scripts" / "longshot_ctl.py")
+    spec = importlib.util.spec_from_file_location("state_tap_client", ROOT / "scripts" / "hookshot_ctl.py")
     client_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(client_module)
     windows = os.name == "nt"
@@ -1227,7 +1227,7 @@ def main():
         subprocess.run([args.cc, "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror", "-Wno-missing-field-initializers",
                         "-D_GNU_SOURCE", "-D_CRT_SECURE_NO_WARNINGS", "-DHOS_CONTROL_NO_GAME", "-I", str(root / "host"), str(src),
                         str(bridge_src), "-o", str(exe)] + warnings + libraries, check=True)
-        address = "longshot-oot-test-%d" % os.getpid() if windows else str(tmp / "control.sock")
+        address = "hookshot-oot-test-%d" % os.getpid() if windows else str(tmp / "control.sock")
         env = dict(os.environ)
         env.pop("HOS_CONTROL_MEM", None)
         with (tmp / "stderr.txt").open("w+") as errors:

@@ -1,7 +1,7 @@
-# Longshot progress feed
+# Hookshot progress feed
 
-The public source is `MagicBeanDev/Longshot` on MagicBean's Forgejo instance.
-The collector uses its `/api/v1/repos/MagicBeanDev/Longshot` API and follows only
+The public source is `MagicBeanDev/Hookshot` on MagicBean's Forgejo instance.
+The collector uses its `/api/v1/repos/MagicBeanDev/Hookshot` API and follows only
 same-endpoint pagination links. It includes all open issues and pull requests,
 closed items updated within 90 days, up to 20 published releases and the latest
 stable release. No stable release is represented explicitly, without borrowing
@@ -30,7 +30,7 @@ private repositories and redirects. Public collection needs no account token. Th
 
 Keys in `progress-curation.json` use `issue:123`, `pull:456` or `release:789` (the release ID, not tag).
 Each entry needs `title`, `summary`, `reviewedAt` (ISO date), `sourceUpdatedAt` (exact API timestamp), and `sources`
-(public URLs under `https://git.magicbean.dev/MagicBeanDev/Longshot/`). Optional `platforms` contains `Windows`, `Linux`,
+(public URLs under `https://git.magicbean.dev/MagicBeanDev/Hookshot/`). Optional `platforms` contains `Windows`, `Linux`,
 `Steam Deck`, or `Other`; optional `area` is `Graphics`, `Performance`, `Controls`, `Audio`, `Setup`, or
 `Documentation`, `Crashes or startup`, or `Sound, controls or saves`; optional `workaround` is plain text.
 Optional `impact` is `Crashes`, `Save integrity`, `Cannot start`, or `Blocked progression`; it enables the reviewed

@@ -1,4 +1,4 @@
-// The people behind Longshot, for the team page: the authors of Longshot's commits on Forgejo (Hookshot's history
+// The people behind Hookshot, for the team page: the authors of Hookshot's commits on Forgejo (Hookshot's history
 // included), most commits first. Collected once per build, like the progress feed; if Forgejo can't be reached, the
 // page says so. Merge commits are left out: they credit whoever merged, not who wrote the change.
 import { REPOSITORY } from './progress.ts';
@@ -29,7 +29,7 @@ export async function collectContributors({ fetcher = fetch, maxPages = 200 } = 
   const people = new Map<string, Contributor>();
   for (let page = 1; page <= maxPages; page++) {
     const url = `${API}/commits?limit=${PER_PAGE}&page=${page}&stat=false&verification=false&files=false`;
-    const response = await fetcher(url, { headers: { Accept: 'application/json', 'User-Agent': 'Longshot-website' },
+    const response = await fetcher(url, { headers: { Accept: 'application/json', 'User-Agent': 'Hookshot-website' },
       signal: AbortSignal.timeout(20000), redirect: 'error' });
     if (!response.ok) throw new Error(`Forgejo commits: HTTP ${response.status}`);
     const commits = await response.json();

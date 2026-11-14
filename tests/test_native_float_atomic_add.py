@@ -222,7 +222,7 @@ def check_source():
 # RX_VK_NATIVE_FADD's value (None: unset), the driver (VkDriverId: the Vulkan specification's numbers), the GPU (PCI
 # device), its driver's version (Intel's Windows encoding: 101.9175 is 101 << 14 | 9175), and whether the float add is then
 # asked to be the GPU's own: unset, NVIDIA's driver and Intel's Windows driver on 0x7Dxx from 101.9175; set, #2042's rule
-# (longshot_env.h env_value_off) whatever the driver
+# (hookshot_env.h env_value_off) whatever the driver
 DRIVERS = {"AMD_PROPRIETARY": 1, "MESA_RADV": 3, "NVIDIA_PROPRIETARY": 4, "INTEL_PROPRIETARY_WINDOWS": 5,
            "INTEL_OPEN_SOURCE_MESA": 6, "MESA_NVK": 24}
 MEASURED = 101 << 14 | 9175
@@ -269,7 +269,7 @@ def check_switch(cxx, tmp):
     cpp, exe = tmp / "switch.cpp", tmp / "switch"
     drivers = ", ".join("VK_DRIVER_ID_%s = %d" % kv for kv in DRIVERS.items())
     cpp.write_text(SWITCH_FIXTURE.replace("@@DRIVERS@@", drivers).replace("@@WANTED@@", wanted), encoding="utf-8")
-    r = subprocess.run([cxx, "-std=c++20", "-include", str(VK / "compat" / "longshot_env.h"), "-Wall", "-Wextra", "-Werror",
+    r = subprocess.run([cxx, "-std=c++20", "-include", str(VK / "compat" / "hookshot_env.h"), "-Wall", "-Wextra", "-Werror",
                         str(cpp), "-o", str(exe)], capture_output=True, text=True, timeout=120)
     if r.returncode:
         print(r.stdout + r.stderr)

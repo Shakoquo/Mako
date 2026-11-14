@@ -1,8 +1,8 @@
 """What the shader caches are good for: the shader translator's sources, and the stamp made of them.
 
-nx2/build.py compiles the stamp into the renderer (LONGSHOT_SHADER_STAMP), where translator_stamp (gpu/vk/vk_shader.cpp) folds
+nx2/build.py compiles the stamp into the renderer (HOOKSHOT_SHADER_STAMP), where translator_stamp (gpu/vk/vk_shader.cpp) folds
 in what the translator is told of the GPU and the environment, and the sizes and C++ library of the records. The program cache
-(longshot_programs.bin), the prepare record and the Vulkan pipeline cache files are dropped whole when it changes, and every
+(hookshot_programs.bin), the prepare record and the Vulkan pipeline cache files are dropped whole when it changes, and every
 player translates every program again at the next start, so the stamp holds the sources that can change a translated program:
 
 - gpu/vk/eden, gpu/vk/sirit and gpu/vk/compat, every file: Eden's recompiler, the SPIR-V emitter and what they are built with;
@@ -41,7 +41,7 @@ def stamped(rel):
 
 
 def stamp(vk):
-    """LONGSHOT_SHADER_STAMP's 16 hex digits for the translator below gpu/vk (vk)"""
+    """HOOKSHOT_SHADER_STAMP's 16 hex digits for the translator below gpu/vk (vk)"""
     h = hashlib.sha1(usedforsecurity=False)
     for f in files(vk):
         with open(f, "rb") as src:

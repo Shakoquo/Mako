@@ -1,4 +1,4 @@
-"""What the shader caches' translator stamp is made of (nx2/translator_files.py, LONGSHOT_SHADER_STAMP of nx2/build.py), run on
+"""What the shader caches' translator stamp is made of (nx2/translator_files.py, HOOKSHOT_SHADER_STAMP of nx2/build.py), run on
 tiny authored files without building the renderer: a translator edit changes it; an edit to a file the translator does not read
 (another renderer source, vk_api.h's host interface and menu ids) keeps it, so every player's translated programs are kept.
 
@@ -16,8 +16,8 @@ spec.loader.exec_module(files)
 
 build = (ROOT / "nx2" / "build.py").read_text(encoding="utf-8")
 assert re.search(r"^import translator_files$", build, re.M), "nx2/build.py no longer imports translator_files"
-assert 'shader_stamp = "-DLONGSHOT_SHADER_STAMP=0x%sull" % translator_files.stamp(vk)' in build, \
-    "nx2/build.py's LONGSHOT_SHADER_STAMP is no longer translator_files.stamp(vk): update this check"
+assert 'shader_stamp = "-DHOOKSHOT_SHADER_STAMP=0x%sull" % translator_files.stamp(vk)' in build, \
+    "nx2/build.py's HOOKSHOT_SHADER_STAMP is no longer translator_files.stamp(vk): update this check"
 assert files.DIRS == ("eden", "sirit", "compat") and files.FILES == ("vk_shader.cpp", "vk_bank.cpp", "vk_state.h"), \
     "the stamped files changed: say in nx2/translator_files.py why each one is in or out, then update this check"
 

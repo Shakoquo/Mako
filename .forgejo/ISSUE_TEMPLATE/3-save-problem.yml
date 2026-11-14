@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        The [saves guide](https://git.magicbean.dev/MagicBeanDev/Longshot/src/branch/main/docs/saves.md) has where saves are and a troubleshooting table: check it first. Every copy made by the launcher or `scripts/oot_saves.py` keeps a backup of the save it replaced, in `oot-save-backups`. **Never attach your save files**: describe them instead.
+        The [saves guide](https://git.magicbean.dev/MagicBeanDev/Hookshot/src/branch/main/docs/saves.md) has where saves are and a troubleshooting table: check it first. Every copy made by the launcher or `scripts/oot_saves.py` keeps a backup of the save it replaced, in `oot-save-backups`. **Never attach your save files**: describe them instead.
   - type: dropdown
     id: kind
     attributes:
@@ -24,7 +24,7 @@ body:
     attributes:
       label: How you copied
       options:
-        - Longshot Launcher's Saves page
+        - Hookshot Launcher's Saves page
         - scripts/oot_saves.py
         - By hand
         - No copy
@@ -33,7 +33,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Longshot version
+      label: Hookshot version
       placeholder: v3.0.0
     validations:
       required: true

@@ -2,7 +2,7 @@
 
 From NotRexed's a64-kit (Rexcomp's AArch64 kit, `Porting Tools\Rexcomp\a64-kit`, a link to
 `Ports\TOTK\TOTKPort\a64-kit`) at TOTKPort commit `60de030` (2026-10-30), **with changes**: Hookshot's, most of them
-marked `(hookshot)`, and Longshot's, marked `(longshot)` (listed below). Only the parts the lifter pipeline needs:
+marked `(hookshot)`, and Hookshot's, marked `(hookshot)` (listed below). Only the parts the lifter pipeline needs:
 `lift/` (lifter, suyu's translator and its ctypes binding), `rt/` (guest model), `tools/nso.py`, `tools/toolchain.py`,
 `tools/survey.py`, `hos/nx_image.py`, `tests/insn_test.py`.
 
@@ -18,8 +18,8 @@ Changes made here after the copy (against Hookshot's first import of it, commit 
   page marked after the store), `tools/toolchain.py` (Windows builds with llvm-mingw, cross builds with
   RX_TARGET=windows), `hos/nx_image.py` (the addend of GLOB_DAT and JUMP_SLOT relocations), `README.a64-kit.md`. The
   history is Hookshot's: `git log 04407384.. -- third_party/a64-kit`.
-- Longshot: `tools/toolchain.py` reads `LONGSHOT_MINGW`, as the rest of Longshot's build sets it, where Hookshot read
-  `HOOKSHOT_MINGW` (marked `(longshot)`). The `(hookshot)` markers and comments stay as Hookshot wrote them.
+- Hookshot: `tools/toolchain.py` reads `HOOKSHOT_MINGW`, as the rest of Hookshot's build sets it, where Hookshot read
+  `HOOKSHOT_MINGW` (marked `(hookshot)`). The `(hookshot)` markers and comments stay as Hookshot wrote them.
 
 So the copy can no longer be refreshed by copying the files again: a refresh keeps these changes, and the tree-sha256
 below is this folder's, not upstream's (python -I scripts/check_third_party.py).

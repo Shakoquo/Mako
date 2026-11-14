@@ -19,7 +19,7 @@
 ## Flags and settings
 
 <!-- A note for reviewers and testers: what this PR adds or changes (an environment variable such as RX_VK_*, HOS_*
-     or LONGSHOT_*, a menu row or option, an ini key, a build or command-line flag) and what you recommend: on by
+     or HOOKSHOT_*, a menu row or option, an ini key, a build or command-line flag) and what you recommend: on by
      default / off by default / on after more testing, with a short reason. "None" when there is none. Document each
      one: docs/development.md, "Switches for testing and debugging" and "The options file"; the README's option table
      for a menu row. -->
@@ -40,7 +40,7 @@ main: <commit> (<date>)
 this PR: <branch> @ <commit>
 Hardware: <GPU, driver, CPU, RAM, OS>
 Scene: <area, time of day; resolution, upscaler, frame generation, frame rate cap>
-Method: <duration, number of runs, and where the numbers come from: the FPS counter's Breakdown or Dev level, longshot_log.txt lines, RX_VK_DRAW_STATS, a test>
+Method: <duration, number of runs, and where the numbers come from: the FPS counter's Breakdown or Dev level, hookshot_log.txt lines, RX_VK_DRAW_STATS, a test>
 How to reproduce: <the save or spot, the settings and switches, the commands, so a tester can repeat the run>
 
 | | main @ <commit> | this PR @ <commit> |

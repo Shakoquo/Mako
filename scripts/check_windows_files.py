@@ -1,9 +1,9 @@
-"""The Windows Longshot Builder's release zip, checked as Windows files on the Linux runner that makes it
+"""The Windows Hookshot Builder's release zip, checked as Windows files on the Linux runner that makes it
 (.forgejo/workflows/build-windows.yml): what a build on Windows gave, and a build elsewhere could quietly lose. No game data is
 involved. Python's standard library, and llvm-mingw's llvm-objdump and llvm-readobj.
 
     python -I scripts/check_windows_files.py --objdump <llvm-objdump> --readobj <llvm-readobj> <zip>
-        the files (LongshotBuilder.exe, the setup, at the top; LongshotBuilder\\ the published builder, its setup copy, the
+        the files (HookshotBuilder.exe, the setup, at the top; HookshotBuilder\\ the published builder, its setup copy, the
         tools), the setup's PE header, imports and resources (windres: its icon, manifest and version), the builder's apphost
         (GUI subsystem, so no console window, its version and manifest copied from the assembly) and its .NET (self-contained
         .NET 8, win-x64, and no WPF: the builder has no window)
@@ -25,9 +25,9 @@ import zipfile
 
 # (the zip's own files, and the builder folder's that a Windows publish has: the app, its apphost, .NET's host and runtime, and
 # what builder_package.py adds. No WPF: the builder has no window)
-TOP = ("LongshotBuilder.exe", "VERSION", "recomplauncher.json", "tools.lock")
-BUILDER = ("LongshotBuilder.exe", "LongshotBuilder.dll", "LongshotBuilder.deps.json", "LongshotBuilder.runtimeconfig.json",
-           "LongshotBuilder-Setup.exe", "LICENSE",
+TOP = ("HookshotBuilder.exe", "VERSION", "recomplauncher.json", "tools.lock")
+BUILDER = ("HookshotBuilder.exe", "HookshotBuilder.dll", "HookshotBuilder.deps.json", "HookshotBuilder.runtimeconfig.json",
+           "HookshotBuilder-Setup.exe", "LICENSE",
            "hostfxr.dll", "hostpolicy.dll", "coreclr.dll", "clrjit.dll", "System.Private.CoreLib.dll",
            "tools/nx2/make_game.py", "tools/scripts/tools.py", "tools/version.txt")
 # (the libraries the setup may import: Windows' own, and the UCRT's api-ms-win-crt-*; never llvm-mingw's libc++ or winpthread)
@@ -78,22 +78,22 @@ def files(a):
                 if n not in names:
                     bad("the zip has no %s" % n)
             for n in BUILDER:
-                if "LongshotBuilder/" + n not in names:
-                    bad("the zip has no LongshotBuilder/%s" % n)
+                if "HookshotBuilder/" + n not in names:
+                    bad("the zip has no HookshotBuilder/%s" % n)
             for n in names:
                 if n.endswith((".pdb", ".exe.config")) or "/ref/" in n:
                     bad("the zip has %s, which a release build leaves out" % n)
             z.extractall(tmp)
         print("%s: %d files" % (os.path.basename(a.zip), len(names)))
-        b = os.path.join(tmp, "LongshotBuilder")
+        b = os.path.join(tmp, "HookshotBuilder")
         with open(os.path.join(tmp, "VERSION"), "rb") as f1, open(os.path.join(b, "tools", "version.txt"), "rb") as f2:
-            if f1.read() != f2.read():   # (the game's log and longshot_version.txt name the release from the second)
-                bad("VERSION and LongshotBuilder/tools/version.txt differ")
-        with open(os.path.join(tmp, "LongshotBuilder.exe"), "rb") as f1, open(os.path.join(b, "LongshotBuilder-Setup.exe"), "rb") as f2:
+            if f1.read() != f2.read():   # (the game's log and hookshot_version.txt name the release from the second)
+                bad("VERSION and HookshotBuilder/tools/version.txt differ")
+        with open(os.path.join(tmp, "HookshotBuilder.exe"), "rb") as f1, open(os.path.join(b, "HookshotBuilder-Setup.exe"), "rb") as f2:
             if f1.read() != f2.read():
-                bad("LongshotBuilder.exe (the setup) and LongshotBuilder/LongshotBuilder-Setup.exe differ")
+                bad("HookshotBuilder.exe (the setup) and HookshotBuilder/HookshotBuilder-Setup.exe differ")
 
-        head, imports = pe(a.objdump, a.readobj, os.path.join(tmp, "LongshotBuilder.exe"), "the setup", True, SETUP_RESOURCES)
+        head, imports = pe(a.objdump, a.readobj, os.path.join(tmp, "HookshotBuilder.exe"), "the setup", True, SETUP_RESOURCES)
         for n in imports:
             if not SETUP_IMPORTS.match(n):
                 bad("the setup imports %s, which is not Windows' own" % n)
@@ -101,24 +101,24 @@ def files(a):
             if n not in imports:
                 bad("the setup does not import %s" % n)
         # (--dependent-load-flag=0x800: LOAD_LIBRARY_SEARCH_SYSTEM32 in its load config)
-        if not re.search(r"DependentLoadFlags: 0x0*800\b", run(a.readobj, "--coff-load-config", os.path.join(tmp, "LongshotBuilder.exe"))):
+        if not re.search(r"DependentLoadFlags: 0x0*800\b", run(a.readobj, "--coff-load-config", os.path.join(tmp, "HookshotBuilder.exe"))):
             bad("the setup's DependentLoadFlags is not 0x800 (LOAD_LIBRARY_SEARCH_SYSTEM32)")
 
-        exe = os.path.join(b, "LongshotBuilder.exe")
+        exe = os.path.join(b, "HookshotBuilder.exe")
         pe(a.objdump, a.readobj, exe, "the builder", True, APPHOST_RESOURCES)
         with open(exe, "rb") as f:
             data = f.read()
-        if "Longshot Builder".encode("utf-16-le") not in data:
-            bad("the builder's apphost has not the assembly's version resource (no \"Longshot Builder\" in it)")
-        if b"LongshotBuilder.dll" not in data:
-            bad("the builder's apphost does not name LongshotBuilder.dll (the SDK did not write it)")
-        dll = run(a.objdump, "-p", os.path.join(b, "LongshotBuilder.dll"))
+        if "Hookshot Builder".encode("utf-16-le") not in data:
+            bad("the builder's apphost has not the assembly's version resource (no \"Hookshot Builder\" in it)")
+        if b"HookshotBuilder.dll" not in data:
+            bad("the builder's apphost does not name HookshotBuilder.dll (the SDK did not write it)")
+        dll = run(a.objdump, "-p", os.path.join(b, "HookshotBuilder.dll"))
         if "file format pei-x86-64" not in dll and "file format pei-i386" not in dll and "file format coff" not in dll:
-            bad("LongshotBuilder.dll is not a PE file")
+            bad("HookshotBuilder.dll is not a PE file")
         for n in names:   # (a window's toolkit is not shipped: the builder is command-line only)
-            if re.match(r"LongshotBuilder/(Presentation|wpfgfx|System\.Windows\.Forms)", n):
+            if re.match(r"HookshotBuilder/(Presentation|wpfgfx|System\.Windows\.Forms)", n):
                 bad("the zip has %s: the builder has no window and needs no WPF or Windows Forms" % n)
-        with open(os.path.join(b, "LongshotBuilder.runtimeconfig.json"), encoding="utf-8") as f:
+        with open(os.path.join(b, "HookshotBuilder.runtimeconfig.json"), encoding="utf-8") as f:
             rc = json.load(f)["runtimeOptions"]
         included = {x["name"]: x["version"] for x in rc.get("includedFrameworks", [])}
         if rc.get("tfm") != "net8.0":
@@ -127,7 +127,7 @@ def files(a):
             bad("the builder does not carry Microsoft.NETCore.App 8 (self-contained): %s" % (included or rc.get("frameworks")))
         if "Microsoft.WindowsDesktop.App" in included:
             bad("the builder carries Microsoft.WindowsDesktop.App (WPF): it has no window")
-        with open(os.path.join(b, "LongshotBuilder.deps.json"), encoding="utf-8") as f:
+        with open(os.path.join(b, "HookshotBuilder.deps.json"), encoding="utf-8") as f:
             target = json.load(f)["runtimeTarget"]["name"]
         if target != ".NETCoreApp,Version=v8.0/win-x64":
             bad("the builder's runtime target is %s, not .NETCoreApp,Version=v8.0/win-x64" % target)
@@ -142,11 +142,11 @@ def wine(a):
         os.makedirs(empty)
         env = dict(os.environ, WINEDEBUG=os.environ.get("WINEDEBUG", "-all"))
         # (Z: is / in Wine)
-        checks = (("the setup", [os.path.join(tmp, "LongshotBuilder.exe"), "--play", "Z:" + empty.replace("/", "\\")],
+        checks = (("the setup", [os.path.join(tmp, "HookshotBuilder.exe"), "--play", "Z:" + empty.replace("/", "\\")],
                    "error No built game to start"),
                   # (the builder's --cli: its tools found beside it, no Python in the Wine prefix, so the Runner stops with an
                   # "error" line; what matters is that .NET and the builder started)
-                  ("the builder", [os.path.join(tmp, "LongshotBuilder", "LongshotBuilder.exe"), "--cli", "--version"],
+                  ("the builder", [os.path.join(tmp, "HookshotBuilder", "HookshotBuilder.exe"), "--cli", "--version"],
                    "error The build tools"))
         for name, cmd, want in checks:
             try:

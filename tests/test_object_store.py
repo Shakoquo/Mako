@@ -1,4 +1,4 @@
-"""The object store shared by every work folder (nx2/object_store.py, LONGSHOT_OBJ_STORE): a work folder takes the objects it
+"""The object store shared by every work folder (nx2/object_store.py, HOOKSHOT_OBJ_STORE): a work folder takes the objects it
 needs from it and gives it its own, the folder's clean-up (make_game.py prune_object_cache) never takes an object from the
 store, and the store's own clean-up lets go only what no folder holds and nobody used lately, oldest first over its size.
 
@@ -41,11 +41,11 @@ def work_folder(top, name, keys=(), used=()):
 
 with tempfile.TemporaryDirectory() as top:
     store_root = Path(top, "store")
-    with mock.patch.dict(os.environ, {"LONGSHOT_OBJ_STORE": ""}):
+    with mock.patch.dict(os.environ, {"HOOKSHOT_OBJ_STORE": ""}):
         assert object_store.root() is None and object_store.folder(top) is None   # (off unless set)
-    with mock.patch.dict(os.environ, {"LONGSHOT_OBJ_STORE": "0"}):
+    with mock.patch.dict(os.environ, {"HOOKSHOT_OBJ_STORE": "0"}):
         assert object_store.root() is None
-    with mock.patch.dict(os.environ, {"LONGSHOT_OBJ_STORE": str(store_root)}):
+    with mock.patch.dict(os.environ, {"HOOKSHOT_OBJ_STORE": str(store_root)}):
         first = work_folder(top, "first", keys=(A, B), used=(A, B))
         store = object_store.folder(str(first))
         assert store == str(store_root / STAMP[:16]), store   # (one folder per compiler and headers)
@@ -79,8 +79,8 @@ with tempfile.TemporaryDirectory() as top:
         removed, _ = object_store.prune(str(store_root), now=now)
         assert (removed == 0) == linked and (Path(store) / (A + ".o")).exists() == linked
 
-    with mock.patch.dict(os.environ, {"LONGSHOT_OBJ_STORE": str(store_root), "LONGSHOT_OBJ_STORE_GB": "0.000001",
-                                      "LONGSHOT_OBJ_STORE_DAYS": "14"}):
+    with mock.patch.dict(os.environ, {"HOOKSHOT_OBJ_STORE": str(store_root), "HOOKSHOT_OBJ_STORE_GB": "0.000001",
+                                      "HOOKSHOT_OBJ_STORE_DAYS": "14"}):
         # (objects only the store holds: the oldest go first while they are over the size; one used in the last hour stays)
         d = store_root / "fedcba9876543210"
         d.mkdir(parents=True)
@@ -92,8 +92,8 @@ with tempfile.TemporaryDirectory() as top:
         removed, freed = object_store.prune(str(store_root), now=now)
         assert sorted(os.listdir(d)) == [C + ".o"] and removed >= 2 and freed >= 2000, (os.listdir(d), removed, freed)
 
-    with mock.patch.dict(os.environ, {"LONGSHOT_OBJ_STORE": str(store_root), "LONGSHOT_OBJ_STORE_GB": "100",
-                                      "LONGSHOT_OBJ_STORE_DAYS": "14"}):
+    with mock.patch.dict(os.environ, {"HOOKSHOT_OBJ_STORE": str(store_root), "HOOKSHOT_OBJ_STORE_GB": "100",
+                                      "HOOKSHOT_OBJ_STORE_DAYS": "14"}):
         # (under the size: only what nobody used for the days goes)
         d = store_root / "0000000000000001"
         d.mkdir(parents=True)

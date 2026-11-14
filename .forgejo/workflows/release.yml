@@ -1,19 +1,19 @@
-# Longshot's releases (docs/releases.md; how to make one: RELEASING.md). The same workflow as MagicBeanDev/LongshotLauncher's,
+# Hookshot's releases (docs/releases.md; how to make one: RELEASING.md). The same workflow as MagicBeanDev/HookshotLauncher's,
 # but for what is built: here the two builders.
 #
 #   a push to main       the nightly: nightly-<commits since the fork>-<commit>, a pre-release
 #   a tag vX.Y.Z-rc.N    a release candidate, a pre-release (the rc channel)
-#   a tag vX.Y.Z         a stable (the stable channel, and rc too). Longshot's first is v3.0.0
+#   a tag vX.Y.Z         a stable (the stable channel, and rc too). Hookshot's first is v3.0.0
 #
 # 1. version: tools.lock is checked first (scripts/tools.py check --require: every tool the Windows and the Linux builder
-#    need is in Longshot's packages), then the version's name; a tag is checked too (scripts/release.py check-tag: its form, on main, above
+#    need is in Hookshot's packages), then the version's name; a tag is checked too (scripts/release.py check-tag: its form, on main, above
 #    every release, and as high as the commits since the last stable call for). Either refused builds nothing.
 #    A tag whose commit CI has released already (its nightly; for a stable, its release candidate) names that release in
 #    `checked` (scripts/release.py released-as: published, its SHA256SUMS signed by a key the launcher trusts and naming its
 #    every file; one that is not stops the run). Its run passed every check of the commit, so the build checks that ship
 #    no file are not run again. Its files are not reused: each carries its version (the AppImage's VERSION and Vulkan back
 #    end, the zip's VERSION and builder), and a release never ships a file that names another version.
-# 2. linux, windows: Longshot-<v>-x86_64.AppImage and LongshotBuilder-<v>-windows-x64.zip (build-linux.yml, build-windows.yml).
+# 2. linux, windows: Hookshot-<v>-x86_64.AppImage and HookshotBuilder-<v>-windows-x64.zip (build-linux.yml, build-windows.yml).
 # 3. publish: SHA256SUMS over the files and tools.lock, SHA256SUMS.sig (the release key), the notes (git-cliff, cliff.toml),
 #    then a draft release with every file, published last: until then no launcher sees it. A nightly also prunes the
 #    nightlies past the newest 5. Nothing is committed back to the repository.
@@ -132,31 +132,31 @@ jobs:
         continue-on-error: true
         uses: https://data.forgejo.org/forgejo/download-artifact@d8d0a99033603453ad2255e58720b460a0555e1e   # v4 (4.1.4 with the GHES check off)
         with:
-          name: Longshot-linux-x86_64
+          name: Hookshot-linux-x86_64
           path: files
       - if: steps.download_1.outcome == 'failure'
         uses: https://data.forgejo.org/forgejo/download-artifact@d8d0a99033603453ad2255e58720b460a0555e1e   # v4 (4.1.4 with the GHES check off)
         with:
-          name: Longshot-linux-x86_64
+          name: Hookshot-linux-x86_64
           path: files
       # (from Forgejo's public address behind Cloudflare, as the build jobs' upload: fetched once more when it failed)
       - id: download_2
         continue-on-error: true
         uses: https://data.forgejo.org/forgejo/download-artifact@d8d0a99033603453ad2255e58720b460a0555e1e   # v4 (4.1.4 with the GHES check off)
         with:
-          name: LongshotBuilder-windows
+          name: HookshotBuilder-windows
           path: files
       - if: steps.download_2.outcome == 'failure'
         uses: https://data.forgejo.org/forgejo/download-artifact@d8d0a99033603453ad2255e58720b460a0555e1e   # v4 (4.1.4 with the GHES check off)
         with:
-          name: LongshotBuilder-windows
+          name: HookshotBuilder-windows
           path: files
       - name: The files
         run: |
           git fetch -q --tags origin
           cp tools.lock files/
           ls -l files
-          test -f "files/Longshot-$TAG-x86_64.AppImage" && test -f "files/LongshotBuilder-$TAG-windows-x64.zip"
+          test -f "files/Hookshot-$TAG-x86_64.AppImage" && test -f "files/HookshotBuilder-$TAG-windows-x64.zip"
       - name: SHA256SUMS, signed
         env:
           KEY: ${{ secrets.RELEASE_SIGNING_KEY }}

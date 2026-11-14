@@ -27,7 +27,7 @@ int wmain(int argc, wchar_t **argv) {
     wchar_t marker[MAX_PATH], moved[MAX_PATH], next[MAX_PATH], normalized[MAX_PATH];
     join(volume, argv[1], L"volume old");
     join(root, volume, HB_HOME_FOLDER);
-    join(exe, root, L"versions\\v-authored\\LongshotBuilder\\LongshotBuilder.exe");
+    join(exe, root, L"versions\\v-authored\\HookshotBuilder\\HookshotBuilder.exe");
     join(ordinary, argv[1], L"standard");
     join(cwd, argv[1], L"unrelated cwd");
     CHECK(SetCurrentDirectoryW(cwd));
@@ -42,7 +42,7 @@ int wmain(int argc, wchar_t **argv) {
     CHECK(hb_home_marked(root) == 1);
     HbHome home;
     CHECK(hb_home_discover(&home, NULL, exe, ordinary) && home.portable && !wcscmp(home.root, root));
-    wchar_t original_setup[MAX_PATH]; join(original_setup, volume, L"LongshotBuilder.exe");
+    wchar_t original_setup[MAX_PATH]; join(original_setup, volume, L"HookshotBuilder.exe");
     CHECK(hb_home_discover(&home, NULL, original_setup, ordinary) && home.portable && !wcscmp(home.root, root));
     CHECK(hb_home_discover(&home, root, exe, ordinary) && home.portable && !wcscmp(home.root, root));
     CHECK(hb_home_discover(&home, ordinary, exe, ordinary) && !home.portable && !wcscmp(home.root, ordinary));
@@ -50,7 +50,7 @@ int wmain(int argc, wchar_t **argv) {
     join(moved, argv[1], L"volume moved");
     CHECK(MoveFileW(volume, moved));
     join(next, moved, HB_HOME_FOLDER);
-    join(exe, next, L"versions\\v-authored\\LongshotBuilder\\LongshotBuilder.exe");
+    join(exe, next, L"versions\\v-authored\\HookshotBuilder\\HookshotBuilder.exe");
     CHECK(hb_home_discover(&home, NULL, exe, ordinary) && home.portable && !wcscmp(home.root, next));
 
     /* Corrupt a separate owned root; never overwrite the valid native interoperability marker. */

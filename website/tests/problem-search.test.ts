@@ -4,7 +4,7 @@ import { problemSearchHash, readProblemSearchHash, prioritizeProblemSearch } fro
 import { readFile } from 'node:fs/promises';
 test('front-page search round trips special characters inside the fragment', () => {
   const query = 'black screen & controller #123 / café?';
-  const url = new URL('https://example.com/Longshot/progress/');
+  const url = new URL('https://example.com/Hookshot/progress/');
   url.hash = problemSearchHash(query);
   assert.equal(url.search, '');
   assert.equal(readProblemSearchHash(url.hash).query, query);

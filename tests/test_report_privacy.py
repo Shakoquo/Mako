@@ -31,7 +31,7 @@ int main(void) {
         hos_report_privacy_redact(&p, b, sizeof b, bad[i], strlen(bad[i]));
         assert(!strcmp(b, "redacted"));
     }
-    const char *good[] = {"longshot.exe", "libc.so.6", "nvoglv64.dll", "Presentation Thread", "v2.1.0-gabc123",
+    const char *good[] = {"hookshot.exe", "libc.so.6", "nvoglv64.dll", "Presentation Thread", "v2.1.0-gabc123",
         "sead::MainThread", "sead::TaskMgr::Worker_2"};
     for (size_t i = 0; i < sizeof good / sizeof good[0]; ++i) {
         hos_report_privacy_redact(&p, b, sizeof b, good[i], strlen(good[i]));
@@ -69,7 +69,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cc", default=shutil.which("gcc") or "clang")
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="longshot-report-privacy-") as temp:
+    with tempfile.TemporaryDirectory(prefix="hookshot-report-privacy-") as temp:
         src, exe = Path(temp) / "privacy.c", Path(temp) / "privacy.exe"
         src.write_text(FIXTURE, encoding="utf-8")
         subprocess.run([args.cc, "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",

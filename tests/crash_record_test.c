@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "prune-reparse")) force_reparse = 1;
 #endif
     hos_crash_record_start(argv[1], "fixture-v1-g1234", argc > 3 ? argv[3] : NULL);
-    fprintf(stderr, "[hos host] longshot fixture-v1-g1234\n[hos host] run_id: %s\n", hos_report_run_id());
+    fprintf(stderr, "[hos host] hookshot fixture-v1-g1234\n[hos host] run_id: %s\n", hos_report_run_id());
     hos_crash_record_log_notes();
     hos_crash_record_log_notes(); /* any deletion warning is emitted once only */
     if (fail_storage || !strcmp(mode, "read-only")) { assert(!ready); hos_crash_clean_end(); return 0; }

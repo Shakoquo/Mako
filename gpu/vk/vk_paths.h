@@ -1,5 +1,5 @@
 // The game folder's path for the files the game keeps there (the shader list, settings): host/hos_paths.h's rule, for this
-// DLL. The game is bin\longshot.exe beside its launcher since the launcher came; its files stay in the folder above bin.
+// DLL. The game is bin\hookshot.exe beside its launcher since the launcher came; its files stay in the folder above bin.
 // game_module_path answers as GetModuleFileNameA(nullptr, ...) does, with the folder's path when the exe is in a "bin" folder
 // beside image.bin. What the game makes as it runs goes in two folders of the game folder: cache/ (cache_path: the shader and
 // pipeline caches, made for this build and this GPU, which can be deleted) and logs/ (log_path: the logs and traces). The host

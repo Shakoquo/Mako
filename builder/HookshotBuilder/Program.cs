@@ -2,19 +2,19 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace LongshotBuilder;
+namespace HookshotBuilder;
 
-/// The Windows builder has no window: players use the Longshot Launcher, which builds and starts the game. What is left:
-///   LongshotBuilder.exe --cli <make_game.py's options>   (RecompLauncher, through the setup) no window; make_game.py's lines on
+/// The Windows builder has no window: players use the Hookshot Launcher, which builds and starts the game. What is left:
+///   HookshotBuilder.exe --cli <make_game.py's options>   (RecompLauncher, through the setup) no window; make_game.py's lines on
 ///                                                        stdout, and its result as the exit code
-///   LongshotBuilder.exe                                  anything else: a message, get the Longshot Launcher
+///   HookshotBuilder.exe                                  anything else: a message, get the Hookshot Launcher
 static class Program
 {
     /// Where players get the launcher (README, "Install and play")
-    public const string LauncherDownload = "https://longshot.magicbean.dev/download";
+    public const string LauncherDownload = "https://hookshot.magicbean.dev/download";
 
     public const string UseTheLauncher =
-        "The Longshot Builder has no window of its own: the Longshot Launcher builds the game and starts it. Get the launcher from " +
+        "The Hookshot Builder has no window of its own: the Hookshot Launcher builds the game and starts it. Get the launcher from " +
         LauncherDownload;
 
     // (RecompLauncher) --cli <make_game.py's options>: no window; its lines on stdout, and its result as the exit code.
@@ -73,7 +73,7 @@ static class Program
     static void Say(string text)
     {
         try { Console.Error.WriteLine(text); } catch (IOException) { }
-        try { MessageBoxW(IntPtr.Zero, text, "Longshot Builder", 0x40 /* MB_ICONINFORMATION */); }
+        try { MessageBoxW(IntPtr.Zero, text, "Hookshot Builder", 0x40 /* MB_ICONINFORMATION */); }
         catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException) { }   // (no user32: a server core, a test)
     }
 

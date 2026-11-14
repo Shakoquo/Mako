@@ -118,7 +118,7 @@ class AppImageCheck(unittest.TestCase):
         fake = mock.MagicMock(host_march=mock.MagicMock(return_value=march))
         with mock.patch.dict(os.environ, {}, clear=False), mock.patch.dict(sys.modules, {"host_cpu": fake}), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
-            for k in ("LONGSHOT_VK_PREBUILT", "RX_MARCH", "LONGSHOT_FSR"):
+            for k in ("HOOKSHOT_VK_PREBUILT", "RX_MARCH", "HOOKSHOT_FSR"):
                 os.environ.pop(k, None)
             os.environ.update(env)
             try:
@@ -128,20 +128,20 @@ class AppImageCheck(unittest.TestCase):
         return None, out.getvalue()
 
     def test_appimage_without_avx2_stops(self):
-        code, out = self.run_check({"LONGSHOT_VK_PREBUILT": "/x/longshot_vk.so"}, "x86-64-v2")
+        code, out = self.run_check({"HOOKSHOT_VK_PREBUILT": "/x/hookshot_vk.so"}, "x86-64-v2")
         self.assertEqual(code, 1)
         self.assertIn("AVX2", out)
 
     def test_appimage_with_avx2_goes_on(self):
-        self.assertIsNone(self.run_check({"LONGSHOT_VK_PREBUILT": "/x/longshot_vk.so"}, "x86-64-v3")[0])
+        self.assertIsNone(self.run_check({"HOOKSHOT_VK_PREBUILT": "/x/hookshot_vk.so"}, "x86-64-v3")[0])
 
     def test_fsr_build_without_avx2_goes_on(self):
         # (AMD FSR 4: the build compiles its own Vulkan back end for this PC, so the prebuilt one's AVX2 does not matter)
-        self.assertIsNone(self.run_check({"LONGSHOT_VK_PREBUILT": "/x/longshot_vk.so"}, "x86-64-v2", fsr=True)[0])
+        self.assertIsNone(self.run_check({"HOOKSHOT_VK_PREBUILT": "/x/hookshot_vk.so"}, "x86-64-v2", fsr=True)[0])
 
     def test_fsr_in_the_shell_is_not_the_builds(self):
-        # (LONGSHOT_FSR=1 left in the shell, a build without --fsr: it uses the prebuilt back end, so the check still stops)
-        code, out = self.run_check({"LONGSHOT_VK_PREBUILT": "/x/longshot_vk.so", "LONGSHOT_FSR": "1"}, "x86-64-v2")
+        # (HOOKSHOT_FSR=1 left in the shell, a build without --fsr: it uses the prebuilt back end, so the check still stops)
+        code, out = self.run_check({"HOOKSHOT_VK_PREBUILT": "/x/hookshot_vk.so", "HOOKSHOT_FSR": "1"}, "x86-64-v2")
         self.assertEqual(code, 1)
         self.assertIn("AVX2", out)
 
@@ -149,7 +149,7 @@ class AppImageCheck(unittest.TestCase):
         self.assertIsNone(self.run_check({}, "x86-64-v2")[0])
 
     def test_rx_march_is_the_players_choice(self):
-        env = {"LONGSHOT_VK_PREBUILT": "/x/longshot_vk.so", "RX_MARCH": "x86-64-v2"}
+        env = {"HOOKSHOT_VK_PREBUILT": "/x/hookshot_vk.so", "RX_MARCH": "x86-64-v2"}
         self.assertIsNone(self.run_check(env, "x86-64-v2")[0])
 
     def test_checked_before_the_game_is_read(self):

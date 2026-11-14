@@ -3,7 +3,7 @@ the Walk control's key is held (Caps Lock by default), or with the Controls tab'
 it to the next, they tilt it to the Walk speed row's share of the way instead.
 
 host/nn_hid.c's read_input, its binding table and the walk helpers are compiled alone, against fake key states, a fake
-window, pad and mouse, and a fake longshot_options.ini: Caps Lock walks by default; the tilt is the row's percent
+window, pad and mouse, and a fake hookshot_options.ini: Caps Lock walks by default; the tilt is the row's percent
 (15 to 90, anything else its default), a diagonal by its length; the camera keys, the pads and the mouse keep theirs;
 Toggle switches on a press, not while the Insert menu has the keys or the window is behind another one, and a key held
 as they come back counts after its release; the key can be rebound (a mouse button too) and taken by another control;
@@ -22,8 +22,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# (env_on, the switches' rule, before the code cut out of the sources: gpu/vk/compat/longshot_env.h)
-ENV_ON_H = str(Path(__file__).resolve().parents[1] / "gpu" / "vk" / "compat" / "longshot_env.h")
+# (env_on, the switches' rule, before the code cut out of the sources: gpu/vk/compat/hookshot_env.h)
+ENV_ON_H = str(Path(__file__).resolve().parents[1] / "gpu" / "vk" / "compat" / "hookshot_env.h")
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -102,7 +102,7 @@ static const char *ini_dir;
 #else
 #define EXE_SEP "/"
 #endif
-static DWORD GetModuleFileNameA(void *m, char *b, DWORD n) { (void)m; return (DWORD)snprintf(b, n, "%s" EXE_SEP "longshot.exe", ini_dir); }
+static DWORD GetModuleFileNameA(void *m, char *b, DWORD n) { (void)m; return (DWORD)snprintf(b, n, "%s" EXE_SEP "hookshot.exe", ini_dir); }
 #define hos_game_path_a(b,n) GetModuleFileNameA(0,b,n)
 /* the keys held, the Insert menu (option 1), the Walk mode and Walk speed rows, the window in front */
 static int held[256], menu_open, walk_mode, walk_speed, front = 1;
@@ -272,7 +272,7 @@ int main(int argc, char **argv) {
     } else if (!strcmp(mode, "taken")) {   /* key_x=20: Caps Lock is X's, and the file has no key_walk */
         binds_load();
         CHECK(hos_binding(HOS_BIND_KEY, HOS_SW_X, 0) == VK_CAPITAL && hos_binding(HOS_BIND_KEY, HOS_KEY_WALK, 0) == 0);
-        CHECK(logged("hid: no Walk key: longshot_options.ini gives its default key (20) to another control"));
+        CHECK(logged("hid: no Walk key: hookshot_options.ini gives its default key (20) to another control"));
         release(), held['W'] = held[VK_CAPITAL] = 1, poll();
         CHECK(st[1] == 32767 && (buttons >> HOS_SW_X & 1));
     } else if (!strcmp(mode, "named")) {   /* key_x=20 and key_walk=86: both as the file says */
@@ -317,7 +317,7 @@ class WalkKeyTests(unittest.TestCase):
                 block(hid, "static void move_keys_stick(")]
         source = PRELUDE + "\n".join(code) + STUBS + block(hid, "static void read_input(") + MAIN
         env = {k: v for k, v in os.environ.items() if not k.startswith(("HOS_INPUT_", "HOS_MOUSE_"))}
-        with tempfile.TemporaryDirectory(prefix="longshot-walk-key-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="hookshot-walk-key-") as tmp:
             tmp = Path(tmp)
             (tmp / "t.c").write_text(source, encoding="utf-8")
             binary = tmp / ("t.exe" if sys.platform == "win32" else "t")
@@ -329,7 +329,7 @@ class WalkKeyTests(unittest.TestCase):
                 folder = tmp / mode
                 folder.mkdir()
                 if ini is not None:
-                    (folder / "longshot_options.ini").write_text(ini, encoding="utf-8")
+                    (folder / "hookshot_options.ini").write_text(ini, encoding="utf-8")
                 run = subprocess.run([str(binary), mode, str(folder)], text=True, capture_output=True, timeout=30, env=env)
                 self.assertEqual(run.returncode, 0, mode + ": " + run.stdout + run.stderr)
 

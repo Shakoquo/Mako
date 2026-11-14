@@ -14,7 +14,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
-RUNNER = (ROOT / "builder" / "LongshotBuilder" / "Runner.cs").read_text(encoding="utf-8")
+RUNNER = (ROOT / "builder" / "HookshotBuilder" / "Runner.cs").read_text(encoding="utf-8")
 
 
 class WindowsBuilderTests(unittest.TestCase):

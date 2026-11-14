@@ -59,11 +59,11 @@ def source_contract():
     main = (ROOT / "host/hos_main.c").read_text(encoding="utf-8")
     prepare = main.index("hos_crash_record_prepare(path);")
     rotate = main.index("MoveFileExA(from, to, MOVEFILE_REPLACE_EXISTING);")
-    assert main.index('memcpy(path + n, "longshot_log.txt", 17);') < prepare < rotate < main.index('freopen(path, "w", stderr)')
+    assert main.index('memcpy(path + n, "hookshot_log.txt", 17);') < prepare < rotate < main.index('freopen(path, "w", stderr)')
     assert "else hos_crash_record_prepare(NULL);" in main
     assert "hos_crash_record_start(path, hos_version(), log_path);" in block(glue, "void hos_crash_record_prepare(")
-    banner = main[main.index('    hos_log("longshot %s", LONGSHOT_VERSION);'):main.index("    removed_switch_notes();")]
-    assert re.findall(r'hos_log\("([^"]+)"', banner)[:2] == ["longshot %s", "run_id: %s"]
+    banner = main[main.index('    hos_log("hookshot %s", HOOKSHOT_VERSION);'):main.index("    removed_switch_notes();")]
+    assert re.findall(r'hos_log\("([^"]+)"', banner)[:2] == ["hookshot %s", "run_id: %s"]
     assert banner.index('hos_log("run_id: %s",') < banner.index("hos_game_layout_log();")
     assert banner.index('hos_log("run_id: %s",') < banner.index("hos_crash_record_log_notes();")
     assert main.index("hos_game_layout();") < prepare
@@ -146,7 +146,7 @@ def records(folder, kind="crash"):
 
 def checked_record(path, kind="crash"):
     text = path.read_text(encoding="utf-8")
-    assert text.startswith("Longshot " + kind + " record 1\n"), text
+    assert text.startswith("Hookshot " + kind + " record 1\n"), text
     lines = text.splitlines()[1:]
     assert all(re.fullmatch(r"[a-z_]+: [^\r\n]*", line) for line in lines), text
     values = dict(line.split(": ", 1) for line in lines)
@@ -168,7 +168,7 @@ def main():
     parser.add_argument("--cc", default=shutil.which("gcc") or "clang")
     args = parser.parse_args()
     glue, threads, host_main = source_contract()
-    with tempfile.TemporaryDirectory(prefix="longshot-crash-record-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="hookshot-crash-record-") as tmp:
         temp = Path(tmp)
         exe = build(args.cc, temp, glue, threads, host_main)
         env = os.environ.copy()
@@ -268,7 +268,7 @@ def main():
             owned.append(path)
         for path in reversed(owned):  # mtime/creation order is the opposite of the required UTC order
             kind, stamp = path.stem.split("-", 1)
-            path.write_text("Longshot " + kind + " record 1\nwhen: " + stamp + "\n", encoding="utf-8")
+            path.write_text("Hookshot " + kind + " record 1\nwhen: " + stamp + "\n", encoding="utf-8")
         target = temp / "untouched-target.txt"; target.write_text("outside pending\n", encoding="utf-8")
         link = pending / "crash-20990101T000000Z.txt"
         prune_mode = "clean"
@@ -377,7 +377,7 @@ def main():
         assert values["log"] == "previous.log" and "token" not in text
         print("PASS: unclean record keeps previous run id and bounded log facts, never private log text")
 
-        for relative in ("logs/longshot_log.txt", "longshot_log.txt"):
+        for relative in ("logs/hookshot_log.txt", "hookshot_log.txt"):
             folder = temp / ("selected-" + relative.split("/")[0]); folder.mkdir()
             selected = folder / relative
             selected.parent.mkdir(exist_ok=True)
@@ -394,7 +394,7 @@ def main():
             fresh = run(folder, "clean")
             text, values = checked_record(records(folder, "unclean")[0], "unclean")
             assert values["run_id"] == old_id and old_id not in fresh.stderr
-            assert values["log"] == "longshot_log.txt" and values["log_tail_fatal"] == "yes"
+            assert values["log"] == "hookshot_log.txt" and values["log_tail_fatal"] == "yes"
             assert int(values["log_size_bytes"]) == selected.stat().st_size
             assert "token" not in text
         print("PASS: selected logs/ destination and beside-game fallback retain previous run id and log facts")

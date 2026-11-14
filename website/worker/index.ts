@@ -1,4 +1,4 @@
-// longshot.magicbean.dev's Worker: the built site (dist/), and permanent download links for the Longshot Launcher.
+// hookshot.magicbean.dev's Worker: the built site (dist/), and permanent download links for the Hookshot Launcher.
 //
 //   /download                                   a page: the launcher for this computer, from the best channel there is
 //   /download/launcher/<os>                     302 to that file of the best channel (stable, else rc, else nightly)
@@ -11,7 +11,7 @@
 // nightly-<count>-<8 hex> by its count. The release list is read from git.magicbean.dev and kept 60 seconds.
 
 const FORGE = "https://git.magicbean.dev";
-const REPO = "MagicBeanDev/LongshotLauncher";
+const REPO = "MagicBeanDev/HookshotLauncher";
 const FIRST_MAJOR = 1;
 const CACHE_SECONDS = 60;
 const CHANNELS = ["stable", "rc", "nightly"];
@@ -66,7 +66,7 @@ export function newest(releases, channel) {
 /** The release asset of a kind (windows, windows-portable, linux), or null */
 export function assetOf(release, kind) {
   const suffix = FILES[kind].suffix;
-  return (release.assets || []).find((a) => a.name.startsWith("LongshotLauncher-") && a.name.endsWith(suffix)) || null;
+  return (release.assets || []).find((a) => a.name.startsWith("HookshotLauncher-") && a.name.endsWith(suffix)) || null;
 }
 
 /** The best channel there is: stable, else rc, else nightly; [channel, release] or [null, null] */
@@ -89,7 +89,7 @@ async function fetchReleases(ctx) {
   for (let page = 1; page <= 5; page++) {
     const r = await fetch(`${FORGE}/api/v1/repos/${REPO}/releases?limit=50&page=${page}`, {
       // (Cloudflare refuses requests with no browser or tool User-Agent)
-      headers: { "User-Agent": "longshot-website (+https://longshot.magicbean.dev)", Accept: "application/json" },
+      headers: { "User-Agent": "hookshot-website (+https://hookshot.magicbean.dev)", Accept: "application/json" },
     });
     if (!r.ok) throw new Error(`git.magicbean.dev answered ${r.status}`);
     const items = await r.json();
@@ -125,8 +125,8 @@ function page(title, body, status = 200) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${esc(title)}</title>
-  <meta name="description" content="Download the Longshot Launcher for Windows or Linux: it builds the game from your own copy.">
-  <link rel="icon" type="image/png" href="/branding/longshot.png">
+  <meta name="description" content="Download the Hookshot Launcher for Windows or Linux: it builds the game from your own copy.">
+  <link rel="icon" type="image/png" href="/branding/hookshot.png">
   <meta name="theme-color" content="#0e100f">
   <script>try { const t = localStorage.getItem("starlight-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}</script>
   <style>
@@ -201,13 +201,13 @@ function page(title, body, status = 200) {
 </head>
 <body>
   <header>
-    <a class="home" href="/"><img src="/branding/longshot.png" alt="" width="512" height="512">Longshot</a>
+    <a class="home" href="/"><img src="/branding/hookshot.png" alt="" width="512" height="512">Hookshot</a>
     <nav aria-label="Main navigation">${NAV.map(([label, href]) => `<a href="${href}">${label}</a>`).join("")}</nav>
   </header>
   <main>
 ${body}
   </main>
-  <footer><p>Bring your own copy of the game: Longshot never includes the game, its keys or an executable.
+  <footer><p>Bring your own copy of the game: Hookshot never includes the game, its keys or an executable.
     All launcher releases: <a href="${FORGE}/${REPO}/releases">git.magicbean.dev</a>.</p></footer>
 </body>
 </html>
@@ -239,7 +239,7 @@ function channelTable(releases) {
 }
 
 const NOT_THE_BUILDER = `<p class="lead">The launcher installs the builder and builds the game on your PC, from your own copy.</p>
-    <p>The <em>LongshotBuilder</em> files on Longshot's releases are for the launcher, not for you to run.</p>`;
+    <p>The <em>HookshotBuilder</em> files on Hookshot's releases are for the launcher, not for you to run.</p>`;
 
 const NEXT_STEPS = `<h2>Then</h2>
     <ol class="steps">
@@ -252,7 +252,7 @@ const NEXT_STEPS = `<h2>Then</h2>
 function downloadPage(request, releases) {
   const [channel, r] = best(releases);
   if (!r) {
-    return page("Download the Longshot Launcher", `    <h1>Download the Longshot Launcher</h1>
+    return page("Download the Hookshot Launcher", `    <h1>Download the Hookshot Launcher</h1>
     <p>There is no release yet. Watch <a href="${FORGE}/${REPO}/releases">the release page</a>.</p>`, 404);
   }
   const os = osOf(request);
@@ -266,7 +266,7 @@ function downloadPage(request, releases) {
     .map((k) => `<a class="pill" href="/download/launcher/${k}">${esc(FILES[k].label)} (${esc(FILES[k].note)})</a>`).join("");
   const warn = channel === "stable" ? "" :
     `<div class="warn">There is no stable launcher yet: this is the newest <strong>${channel}</strong> (${esc(CHANNEL_NOTE[channel])}).</div>`;
-  return page("Download the Longshot Launcher", `    <h1>Download the Longshot Launcher</h1>
+  return page("Download the Hookshot Launcher", `    <h1>Download the Hookshot Launcher</h1>
     ${NOT_THE_BUILDER}
     ${warn}
     <div class="bigs">${bigs}</div>
@@ -283,7 +283,7 @@ function notFound(releases, what, kind) {
     offer += `<a class="big" href="/download/launcher/${channel}/${kind}">Get ${esc(r.tag_name)} instead` +
       `<small>${esc(FILES[kind].label)} · ${esc(FILES[kind].note)} · ${esc(CHANNEL_NOTE[channel])}</small></a>`;
   }
-  return page("Not found: Longshot Launcher", `    <h1>${esc(what)}</h1>
+  return page("Not found: Hookshot Launcher", `    <h1>${esc(what)}</h1>
     ${offer}
     ${channelTable(releases)}
     <p><a class="pill" href="/download">Back to the download page</a></p>`, 404);
@@ -303,7 +303,7 @@ async function download(request, ctx, parts) {
   try {
     releases = await fetchReleases(ctx);
   } catch (e) {
-    return page("Longshot Launcher", `    <h1>Can't reach git.magicbean.dev</h1>
+    return page("Hookshot Launcher", `    <h1>Can't reach git.magicbean.dev</h1>
     <p>${esc(e.message)}. Try again in a minute, or download from <a href="${FORGE}/${REPO}/releases">the release page</a>.</p>`, 502);
   }
   // /download

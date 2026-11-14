@@ -6,14 +6,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        Before you start: check the [build requirements](https://git.magicbean.dev/MagicBeanDev/Longshot#what-you-need) (on Windows, Visual Studio Build Tools with "Desktop development with C++" and the Windows SDK; about 60 GB free) and search the [open issues](https://git.magicbean.dev/MagicBeanDev/Longshot/issues). English, please. **Never attach game files or anything built from them.**
+        Before you start: check the [build requirements](https://git.magicbean.dev/MagicBeanDev/Hookshot#what-you-need) (on Windows, Visual Studio Build Tools with "Desktop development with C++" and the Windows SDK; about 60 GB free) and search the [open issues](https://git.magicbean.dev/MagicBeanDev/Hookshot/issues). English, please. **Never attach game files or anything built from them.**
   - type: dropdown
     id: tool
     attributes:
       label: What you used
       options:
-        - Longshot Launcher
-        - Longshot Builder (Windows)
+        - Hookshot Launcher
+        - Hookshot Builder (Windows)
         - Linux AppImage
         - Command line (nx2/make_game.py)
     validations:
@@ -22,8 +22,8 @@ body:
     id: version
     attributes:
       label: Version
-      description: The launcher's or the builder's version, and the Longshot version it was installing.
-      placeholder: Launcher v1.0.0, Longshot v3.0.0
+      description: The launcher's or the builder's version, and the Hookshot version it was installing.
+      placeholder: Launcher v1.0.0, Hookshot v3.0.0
     validations:
       required: true
   - type: dropdown

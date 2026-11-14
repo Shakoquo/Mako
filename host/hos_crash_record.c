@@ -20,7 +20,7 @@
 #include <windows.h>
 #include <dbghelp.h>
 #include <io.h>
-#include "../gpu/vk/compat/longshot_env.h"
+#include "../gpu/vk/compat/hookshot_env.h"
 typedef HANDLE File;
 #define NO_FILE INVALID_HANDLE_VALUE
 #else
@@ -294,7 +294,7 @@ static int module_at(uintptr_t pc, char *name, size_t cap, uint64_t *offset) {
     if (!VirtualQuery((const void *)pc, &mbi, sizeof mbi) || mbi.Type != MEM_IMAGE) return 0;
     const uintptr_t base = (uintptr_t)mbi.AllocationBase;
     *offset = pc - base;
-    if (base == executable_base) { hos_crash_redact(name, cap, "longshot.exe", 12); return 1; }
+    if (base == executable_base) { hos_crash_redact(name, cap, "hookshot.exe", 12); return 1; }
     /* Read the image's export name, not its loader entry/full path. */
     IMAGE_DOS_HEADER dos; IMAGE_NT_HEADERS64 nt;
     if (!safe_read(base, &dos, sizeof dos) || dos.e_magic != IMAGE_DOS_SIGNATURE || dos.e_lfanew < 0 ||
@@ -431,7 +431,7 @@ static int valid_run_id(const char id[33]) {
 
 static void format_record(Text *b, const Session *s, const HosCrashContext *c, uint64_t now, const LogFacts *facts) {
     b->n = 0; b->full = 0;
-    put(b, c ? "Longshot crash record 1\n" : "Longshot unclean record 1\n");
+    put(b, c ? "Hookshot crash record 1\n" : "Hookshot unclean record 1\n");
     label_field(b, "version", s->version, sizeof s->version);
     field(b, "run_id", s->run_id);
     char when[17]; timestamp(now, when); field(b, "when", when);
@@ -514,7 +514,7 @@ static void recover_one(const char *name) {
     if (!join(path, sizeof path, running_dir, name)) return;
     File old = open_file(path, 0, 1); if (old == NO_FILE) return; /* live owner holds the lock */
     Session before;
-    if (!read_file(old, &before, sizeof before, 0) || memcmp(before.magic, "Longshot running 1", 19) ||
+    if (!read_file(old, &before, sizeof before, 0) || memcmp(before.magic, "Hookshot running 1", 19) ||
         !valid_run_id(before.run_id) || !memchr(before.version, 0, sizeof before.version) ||
         !memchr(before.log_path, 0, sizeof before.log_path)) {
         close_file(old); return; /* not ours: do not remove or invent a report */
@@ -539,7 +539,7 @@ static void recover_one(const char *name) {
         ssize_t n = read(file, saved, sizeof saved - 1); if (n > 0) got = (size_t)n;
 #endif
         saved[got] = 0;
-        const int complete = got > 30 && !strncmp(saved, "Longshot crash record 1\n", 24) &&
+        const int complete = got > 30 && !strncmp(saved, "Hookshot crash record 1\n", 24) &&
                              strstr(saved, "\nrecord_complete: yes\n") != NULL;
         int ok = complete;
         if (!complete) {
@@ -778,7 +778,7 @@ void hos_crash_record_start(const char *dir, const char *version, const char *lo
         !join(running_dir, sizeof running_dir, root, "running") || !make_dir(running_dir)) return;
     recover();
     prune_pending();
-    memcpy(session.magic, "Longshot running 1", 19);
+    memcpy(session.magic, "Hookshot running 1", 19);
     session.epoch = epoch_now(); session.monotonic_ms = monotonic_now();
     hos_crash_redact(session.version, sizeof session.version, version, length(version, 128));
     const char *run_id = hos_report_run_id();

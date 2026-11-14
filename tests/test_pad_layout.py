@@ -164,7 +164,7 @@ class PadLayoutTests(unittest.TestCase):
         if not cc or not cxx:
             self.skipTest("no C or C++ compiler")
         hid, fixture, _ = sources(ROOT)
-        with tempfile.TemporaryDirectory(prefix="longshot-pad-layout-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="hookshot-pad-layout-") as tmp:
             tmp = Path(tmp)
             (tmp / "hid.c").write_text(hid, encoding="utf-8")
             (tmp / "menu.cpp").write_text(fixture, encoding="utf-8")

@@ -6,7 +6,7 @@ import { assetOf, best, newest, versionKey } from "../worker/index.ts";
 
 const rel = (tag_name, draft, prerelease, files = ["windows-x64-setup.exe", "windows-x64-portable.zip", "x86_64.AppImage"]) => ({
   tag_name, draft, prerelease, html_url: `https://git.example.invalid/${tag_name}`,
-  assets: [...files.map((f) => ({ name: `LongshotLauncher-${tag_name}-${f}`, browser_download_url: `https://f/${tag_name}/${f}` })),
+  assets: [...files.map((f) => ({ name: `HookshotLauncher-${tag_name}-${f}`, browser_download_url: `https://f/${tag_name}/${f}` })),
            { name: "SHA256SUMS" }, { name: "SHA256SUMS.sig" }],
 });
 
@@ -42,9 +42,9 @@ test("the best channel: stable, else rc, else nightly", () => {
 
 test("each file by its kind", () => {
   const r = rel("v1.0.0", false, false, ["windows-x64-setup.exe", "x86_64.AppImage"]);
-  assert.equal(assetOf(r, "windows").name, "LongshotLauncher-v1.0.0-windows-x64-setup.exe");
-  assert.equal(assetOf(r, "linux").name, "LongshotLauncher-v1.0.0-x86_64.AppImage");
+  assert.equal(assetOf(r, "windows").name, "HookshotLauncher-v1.0.0-windows-x64-setup.exe");
+  assert.equal(assetOf(r, "linux").name, "HookshotLauncher-v1.0.0-x86_64.AppImage");
   assert.equal(assetOf(r, "windows-portable"), null);
-  // (Longshot's builder is never a launcher file)
-  assert.equal(assetOf({ assets: [{ name: "Longshot-v3.0.0-x86_64.AppImage" }] }, "linux"), null);
+  // (Hookshot's builder is never a launcher file)
+  assert.equal(assetOf({ assets: [{ name: "Hookshot-v3.0.0-x86_64.AppImage" }] }, "linux"), null);
 });

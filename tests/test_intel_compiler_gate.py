@@ -1,7 +1,7 @@
 """Windows Intel's compiler is entered by one thread, and a fault creating a shader module leaves that program out.
 
 Intel UHD on Windows (igvk64) read address 0x170 during the first scene and the process ended. The stack was two frames
-in longshot_vk.dll and then the thread start, and the log had no "driver faulted compiling" line, so the call was not
+in hookshot_vk.dll and then the thread start, and the log had no "driver faulted compiling" line, so the call was not
 inside guarded_graphics or guarded_compute. vkCreateShaderModule (translation, the movie and upscale helpers, a masked
 clear) and gpl_link's vkCreateGraphicsPipelines were not guarded, and graphics pipelines were still built side by side.
 NVIDIA, AMD, and Intel on other systems are not held. The Debug tab's Intel shader compiles row (Intel graphics on
@@ -109,7 +109,7 @@ def main():
     need(link.index("IntelDriverGate") < link.index("guarded_graphics"), "gpl_link's pipeline is not guarded")
     need("vkCreateGraphicsPipelines" not in link, "gpl_link still calls the driver with no guard")
     # (a pipeline cache's data fetched while another thread builds: the same crash in igvk64. main's fetch lock covers it,
-    # PcacheFetch, MagicBeanDev/Longshot#190 (tests/test_pcache_fetch_lock.py). The gate stays outside that lock: a builder
+    # PcacheFetch, MagicBeanDev/Hookshot#190 (tests/test_pcache_fetch_lock.py). The gate stays outside that lock: a builder
     # takes the gate, then PcacheUse's shared side, so a fetch taking the gate inside PcacheFetch would wait for a builder
     # that waits for it)
     for fn in ("size_t play_file_write(", "void pcache_init()", "bool pcache_saved_now()", "void pipeline_cache_save(bool force)"):
@@ -131,7 +131,7 @@ def main():
     need(module.index("driver_faulted_program(program)") < module.index("IntelDriverGate"),
          "a program the driver faulted on is handed to it again")
     need("if (r == (VkResult)-77) driver_faulted_module(program);" in module,
-         "a fault making a module is not kept in longshot_driver_faults.txt")
+         "a fault making a module is not kept in hookshot_driver_faults.txt")
     temporal = (ROOT / "gpu/vk/vk_temporal.cpp").read_text(encoding="utf-8")
     pipe = block(temporal, "bool make_pipeline(")
     actor = block(temporal, "bool make_actor_pipeline()")

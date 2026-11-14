@@ -14,10 +14,10 @@ async function loadRepoPages(context: LoaderContext) {
   }
 }
 
-export function longshotDocsLoader(): Loader {
+export function hookshotDocsLoader(): Loader {
   const docs = docsLoader();
   return {
-    name: 'longshot-docs',
+    name: 'hookshot-docs',
     async load(context) {
       await docs.load(context);
       await loadRepoPages(context);

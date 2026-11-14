@@ -2,7 +2,7 @@
 
 Each new measured run is one file in this directory. The [existing table](../tested-configurations.md#earlier-runs-frozen)
 stays frozen; do not append to it. Readers can open each file here or the
-[combined website catalogue](https://longshot.magicbean.dev/tested-configurations/).
+[combined website catalogue](https://hookshot.magicbean.dev/tested-configurations/).
 
 Name the file `YYYY-MM-DD-topic-tester-run.md`, for example `2026-11-13-cache-jane-run01.md`.
 **Include the tester's name and a distinct run identifier.** Use lowercase letters, digits and hyphens after the date,

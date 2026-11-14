@@ -1,21 +1,21 @@
-"""Copy Ocarina of Time saves between Longshot, Hookshot and the emulators and ports that run the game: they all keep the
+"""Copy Ocarina of Time saves between Hookshot, Hookshot and the emulators and ports that run the game: they all keep the
 same files, so a copy is all it takes.
 
     python -I scripts/oot_saves.py list
     python -I scripts/oot_saves.py import <name>  [--profile ID] [--keep-settings] [--dry-run] [--force]
     python -I scripts/oot_saves.py export <name>  [--profile ID] [--keep-settings] [--dry-run] [--force]
-    python -I scripts/oot_saves.py import --from DIR   (a save from any folder into Longshot)
-    python -I scripts/oot_saves.py export --to DIR     (Longshot's save into any folder)
+    python -I scripts/oot_saves.py import --from DIR   (a save from any folder into Hookshot)
+    python -I scripts/oot_saves.py export --to DIR     (Hookshot's save into any folder)
 
-import copies into Longshot, export copies out of it. <name> is hookshot or one of EMULATORS below: lichii, frizti,
+import copies into Hookshot, export copies out of it. <name> is hookshot or one of EMULATORS below: lichii, frizti,
 orchid, pokedinner, eden, eglantine or nx2navi. --from/--to name the other side's folder instead of where it is looked
 for: the save folder itself (the one with account.sav and slot_*), or a folder above it (an emulator's data folder, a
-portable user folder, a game folder), which is searched for the game's saves. --longshot DIR does the same for
-Longshot's side, --hookshot DIR for Hookshot's. Longshot's and Hookshot's saves are in their data folder on Linux
-($XDG_DATA_HOME/longshot or /hookshot, default ~/.local/share/...) and in the game folder's user\\save on Windows
-(default %USERPROFILE%\\Games\\Longshot or \\Hookshot). The side being overwritten is copied first to
+portable user folder, a game folder), which is searched for the game's saves. --hookshot DIR does the same for
+Hookshot's side, --hookshot DIR for Hookshot's. Hookshot's and Hookshot's saves are in their data folder on Linux
+($XDG_DATA_HOME/hookshot or /hookshot, default ~/.local/share/...) and in the game folder's user\\save on Windows
+(default %USERPROFILE%\\Games\\Hookshot or \\Hookshot). The side being overwritten is copied first to
 <backup>/<import or export>-<name>-<YYYYmmdd-HHMMSS> (Linux: $XDG_DATA_HOME/oot-save-backups, Windows:
-%LOCALAPPDATA%\\Longshot\\oot-save-backups; --backup-dir changes it). Close every game first: --force skips that check.
+%LOCALAPPDATA%\\Hookshot\\oot-save-backups; --backup-dir changes it). Close every game first: --force skips that check.
 Standard library only; the guide is docs/saves.md.
 """
 import argparse
@@ -32,7 +32,7 @@ import tempfile
 
 TITLE = "0400486024DEC000"
 NO_ACCOUNT = "0000000000000000"
-# The one user Longshot and Hookshot play as (host/nn_applet.c's user_uid, as host/nn_fs.c names its save folder): a save
+# The one user Hookshot and Hookshot play as (host/nn_applet.c's user_uid, as host/nn_fs.c names its save folder): a save
 # copied into either of them when it has none yet goes in save/<this>
 USER_ID = "5a3c9e1f0b7d24680000000000000001"
 WINDOWS = os.name == "nt"
@@ -59,8 +59,8 @@ EMULATORS = [
             ["nx2navi", "ocarina"], []),
 ]
 # (the builders' default game folder on Windows; Hookshot's 3.0 launcher kept one folder per version under it)
-LONGSHOT = Program("longshot", "Longshot", {"linux": ["{data}/longshot"], "windows": ["{home}/Games/Longshot"]},
-                   ["longshot"], [])
+HOOKSHOT = Program("hookshot", "Hookshot", {"linux": ["{data}/hookshot"], "windows": ["{home}/Games/Hookshot"]},
+                   ["hookshot"], [])
 HOOKSHOT = Program("hookshot", "Hookshot", {"linux": ["{data}/hookshot"],
                                             "windows": ["{home}/Games/Hookshot", "{home}/Games/Hookshot/*"]},
                    ["hookshot"], [])
@@ -73,7 +73,7 @@ LAYOUTS = (
     ("nand", "user", "save", "account", "<id>", TITLE, "0"),   # Eden's newer layout: used first when it exists
     ("nand", "user", "save", NO_ACCOUNT, "<id>", TITLE),        # Eden and its forks (Lichii, Eglantine, ...)
     ("profile", "save", "<id>"),                                 # NX2navi's game folder
-    ("user", "save", "<id>"),                                    # Longshot's and Hookshot's game folder on Windows
+    ("user", "save", "<id>"),                                    # Hookshot's and Hookshot's game folder on Windows
     ("save", "<id>"),                                            # their data folder on Linux
 )
 SLOT = re.compile(r"slot_\d{2,3}$")
@@ -91,7 +91,7 @@ def data_home():
 def default_backup_dir():
     if WINDOWS:
         base = os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Local")
-        return os.path.join(base, "Longshot", "oot-save-backups")
+        return os.path.join(base, "Hookshot", "oot-save-backups")
     return os.path.join(data_home(), "oot-save-backups")
 
 
@@ -183,10 +183,10 @@ def locate(program, override, flag):
 
 
 def new_save_folder(program, override):
-    """Where a save copied into Longshot or Hookshot goes when it has none yet: save/USER_ID in its data folder on Linux,
+    """Where a save copied into Hookshot or Hookshot goes when it has none yet: save/USER_ID in its data folder on Linux,
     user/save/USER_ID in its game folder on Windows (which has to be there: no save is made where nothing was built).
     None for the others: their profile ids are their own."""
-    if program not in (LONGSHOT, HOOKSHOT):
+    if program not in (HOOKSHOT, HOOKSHOT):
         return None
     root = override if override is not None else folders(program)[0]
     if not WINDOWS:
@@ -207,7 +207,7 @@ def pick(found, name, flag, wanted=None):
 
 
 def side(program, override, flag, wanted, target):
-    """The save folder of one side. The target of a copy into Longshot or Hookshot may have no save yet: new_save_folder."""
+    """The save folder of one side. The target of a copy into Hookshot or Hookshot may have no save yet: new_save_folder."""
     try:
         found = locate(program, override, flag)[1]
     except Fail:
@@ -215,7 +215,7 @@ def side(program, override, flag, wanted, target):
         if fresh is None or os.path.exists(fresh) and not os.path.isdir(fresh):
             raise
         return fresh
-    own = program in (LONGSHOT, HOOKSHOT)
+    own = program in (HOOKSHOT, HOOKSHOT)
     return pick(found, program.display, flag + " <the user id folder>" if own else "--profile <id>", wanted)[1]
 
 
@@ -234,14 +234,14 @@ def pending_commit(save):
 def process_names():
     """{process name: what it belongs to} for every program in the tables."""
     names = collections.OrderedDict()
-    for program in [LONGSHOT] + OTHERS:
+    for program in [HOOKSHOT] + OTHERS:
         for p in program.processes:
             names[p] = names[p] + " or " + program.display if p in names else program.display
     return names
 
 
 def running_games():
-    """What is running among Longshot, Hookshot and the emulators."""
+    """What is running among Hookshot, Hookshot and the emulators."""
     known = process_names()
     names = set()
     if WINDOWS:
@@ -293,7 +293,7 @@ def show(title, folder, found):
 
 
 def list_all(args):
-    for program, override, flag in ((LONGSHOT, args.longshot, "--longshot"), (HOOKSHOT, args.hookshot, "--hookshot")):
+    for program, override, flag in ((HOOKSHOT, args.hookshot, "--hookshot"), (HOOKSHOT, args.hookshot, "--hookshot")):
         try:
             show(program.display, *locate(program, override, flag))
         except Fail as e:
@@ -507,7 +507,7 @@ def run(args):
         raise Fail("--hookshot is Hookshot's folder: it goes with import hookshot or export hookshot")
     folder = args.folder or (args.hookshot if other is HOOKSHOT else None)
     importing = args.command == "import"
-    ours = side(LONGSHOT, args.longshot, "--longshot", None, importing)
+    ours = side(HOOKSHOT, args.hookshot, "--hookshot", None, importing)
     theirs = side(other, folder, flag if args.folder or other is not HOOKSHOT else "--hookshot", args.profile, not importing)
     src, dst = (theirs, ours) if importing else (ours, theirs)
     if os.path.isdir(dst) and os.path.realpath(src) == os.path.realpath(dst):
@@ -538,11 +538,11 @@ def run(args):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], prog="oot_saves.py")
-    p.add_argument("command", choices=["list", "import", "export"], help="import: into Longshot; export: out of Longshot")
+    p.add_argument("command", choices=["list", "import", "export"], help="import: into Hookshot; export: out of Hookshot")
     p.add_argument("name", nargs="?", help="where from or to: %s" % ", ".join(e.name for e in OTHERS))
     p.add_argument("--from", dest="from_dir", metavar="DIR", help="import from this folder (a save, or one to search)")
     p.add_argument("--to", dest="to_dir", metavar="DIR", help="export to this folder (a save, or one to search)")
-    p.add_argument("--longshot", metavar="DIR", help="Longshot's data folder (Windows: the game folder)")
+    p.add_argument("--hookshot", metavar="DIR", help="Hookshot's data folder (Windows: the game folder)")
     p.add_argument("--hookshot", metavar="DIR", help="Hookshot's data folder (Windows: the game folder)")
     p.add_argument("--profile", metavar="ID", help="the emulator's profile, when several have saves")
     p.add_argument("--backup-dir", metavar="DIR", help="where the backup of the overwritten side goes")

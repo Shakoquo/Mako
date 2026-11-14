@@ -10,13 +10,13 @@ export default defineConfig({
   trailingSlash: 'always',
   markdown: { processor: unified({ remarkPlugins: [remarkTestedConfigurations] }) },
   integrations: [repoAssets(), starlight({
-    title: 'Longshot',
-    description: 'Longshot by Team MagicBean. Guides, project updates, and practical help for your PC adventure.',
-    favicon: '/branding/longshot.png',
+    title: 'Hookshot',
+    description: 'Hookshot by Team MagicBean. Guides, project updates, and practical help for your PC adventure.',
+    favicon: '/branding/hookshot.png',
     customCss: ['./src/styles/theme.css', './src/styles/content.css'],
     components: {
       Header: './src/components/Header.astro',
-      Hero: './src/components/LongshotHero.astro',
+      Hero: './src/components/HookshotHero.astro',
       Footer: './src/components/Footer.astro',
     },
     editLink: { baseUrl: editUrl('website/') },
@@ -40,7 +40,7 @@ export default defineConfig({
         { label: 'Source code ↗', link: repository },
       ] },
       { label: 'About', items: [
-        { label: 'About Longshot', slug: 'about' },
+        { label: 'About Hookshot', slug: 'about' },
         { label: 'Team MagicBean', slug: 'about/team' },
       ] },
     ],

@@ -15,7 +15,7 @@ export const repoRoot = path.resolve('..');
 const repoFile = (file: string) => path.join(repoRoot, file);
 
 // Repository files the site serves itself (copied into public/ by the repoAssets integration).
-const publicAssets = new Set(['assets/longshot.png']);
+const publicAssets = new Set(['assets/hookshot.png']);
 
 /** Every file a page is made from, for rebuilding the pages when one changes in dev. */
 export const sourceFiles = [...new Set([...Object.values(contentPages), 'gpu/vk/vk_menu.cpp'])].map(repoFile);

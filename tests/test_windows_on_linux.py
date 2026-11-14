@@ -1,4 +1,4 @@
-"""Game-free checks that Longshot's Windows files are made on the Linux runner (docs/forgejo-runners.md: there is no Windows
+"""Game-free checks that Hookshot's Windows files are made on the Linux runner (docs/forgejo-runners.md: there is no Windows
 one): no workflow asks for a Windows runner, which would queue forever and hold a release; the Linux llvm-mingw that compiles
 them is tools.lock's release; the Windows builder's job publishes for win-x64 and checks what it made, and tools.lock's
 dav1d (no dav1d is built in CI); and a tag whose commit CI released already skips only the checks that ship no file.
@@ -83,11 +83,11 @@ class WindowsOnLinuxTests(unittest.TestCase):
             self.assertRegex(step, r"if: env\.RELEASE_CHECKED == ''", step.splitlines()[0])
         linux = (WORKFLOWS / "build-linux.yml").read_text(encoding="utf-8")
         gated = re.findall(r"- name: (.*)\n\s+if: env\.RELEASE_CHECKED == ''", linux)
-        self.assertEqual(gated, ["longshot_vk.so with AMD FSR 4 (build check)"])
+        self.assertEqual(gated, ["hookshot_vk.so with AMD FSR 4 (build check)"])
 
     def test_release_stays_self_contained(self):
         # (dotnet publish -c Release: self-contained win-x64, a folder, as the Windows build made it)
-        csproj = (ROOT / "builder" / "LongshotBuilder" / "LongshotBuilder.csproj").read_text(encoding="utf-8")
+        csproj = (ROOT / "builder" / "HookshotBuilder" / "HookshotBuilder.csproj").read_text(encoding="utf-8")
         self.assertIn("<RuntimeIdentifier>win-x64</RuntimeIdentifier>", csproj)
         self.assertIn("<SelfContained>true</SelfContained>", csproj)
         self.assertIn("<PublishSingleFile>false</PublishSingleFile>", csproj)
