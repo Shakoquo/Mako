@@ -398,6 +398,7 @@ def main():
                .replace('@SHADOWS_FREED@', block(text, 'void late_fix_shadows_freed() {')))
     env = {k: v for k, v in os.environ.items()
            if k not in ('RX_VK_LATE_FIX', 'RX_VK_PARALLEL', 'RX_VK_NO_READBACK_WAIT', 'RX_VK_SHADOW_FOLLOWS_SYNC')}
+    env['RX_VK_LATE_FIX'] = '1'   # (Mako 4.1.1: off by default, the fix asked for)
     with tempfile.TemporaryDirectory(prefix='late-fix-build-') as tmp:
         src = Path(tmp) / 'late_fix_build.cpp'
         exe = Path(tmp) / 'late_fix_build.exe'

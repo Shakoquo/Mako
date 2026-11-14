@@ -35,8 +35,8 @@ def need(text, needles, where):
 
 def check_source():
     mem = (ROOT / "gpu/vk/vk_memory.cpp").read_text(encoding="utf-8")
-    # (on by default: unset is on, =0 / off / false / no off; never where the device can't)
-    need(block(mem, "bool mirror_sparse_on()"), ['getenv("RX_VK_MIRROR_SPARSE")', "const bool asked = !v || !env_value_off(v);",
+    # (Mako 4.1.1: off by default, unset is off, =1 on; never where the device can't)
+    need(block(mem, "bool mirror_sparse_on()"), ['getenv("RX_VK_MIRROR_SPARSE")', "const bool asked = v && *v && !env_value_off(v);",
                                                  "residencyNonResidentStrict", "sparseResidencyBuffer", "return asked && can;"],
          "mirror_sparse_on()")
     make = block(mem, "bool mirror_make(Pool& pool) {")

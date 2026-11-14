@@ -2028,12 +2028,12 @@ int64_t memory_late_wait_ns() { return st_late_wait_ns.load(std::memory_order_re
 // words from a 4 KB snapshot each whole copy also writes (from the second time the page is late); a pool of 16 MB or less
 // is given a shadow instead. A capture waits as before when any of its late pages was written in place by the GPU, has no
 // stamps or snapshot yet (the first time it is found), or is late for an earlier capture whose fix is not recorded yet.
-// RX_VK_LATE_FIX=0: the wait, as before
+// (Mako 4.1.1) off by default: the wait, as before (measured 1-3 fps faster on the Plaine tour); RX_VK_LATE_FIX=1: the fix
 namespace {
 bool late_fix_on() {   // (not with the parallel replay: its segments' workers record copies out of the captures in any order)
-    static const bool on = [] {   // (on unless an off value: env_value_off)
+    static const bool on = [] {   // (Mako: off unless asked for)
         const char* e = getenv("RX_VK_LATE_FIX");
-        return (!e || !env_value_off(e)) && !(getenv("RX_VK_PARALLEL") && atoi(getenv("RX_VK_PARALLEL")) > 1);
+        return (e && *e && !env_value_off(e)) && !(getenv("RX_VK_PARALLEL") && atoi(getenv("RX_VK_PARALLEL")) > 1);
     }();
     return on;
 }
@@ -2268,7 +2268,7 @@ bool late_fix_pipe_ready() {
         }
     }
     const bool ok = late_fix_pipe.pipe != VK_NULL_HANDLE;
-    logf("vk: late pages' fix %s", ok ? "on (RX_VK_LATE_FIX=0: the wait, as before)" : "off: its pipeline was not made");
+    logf("vk: late pages' fix %s", ok ? "on (RX_VK_LATE_FIX=1)" : "off: its pipeline was not made");
     return ok;
 }
 LateFixTable* late_fix_table_get(uint64_t bytes) {   // (a ring: one is taken again once the recording that read it is done)
@@ -3315,7 +3315,7 @@ std::vector<WriteBack> writebacks;
 bool mirror_sparse_on() {
     static const bool on = [] {
         const char* v = getenv("RX_VK_MIRROR_SPARSE");
-        const bool asked = !v || !env_value_off(v);
+        const bool asked = v && *v && !env_value_off(v);   // (Mako 4.1.1: off by default, whole mirrors; RX_VK_MIRROR_SPARSE=1)
         const bool can = dev.sparse_buffers && dev.features.sparseResidencyBuffer &&
                          dev.props.sparseProperties.residencyNonResidentStrict;
         if (asked)

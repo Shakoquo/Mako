@@ -337,7 +337,7 @@ static void pages_report_locked(void) {
    free = total - used would wrap to a huge figure and it would map without limit again */
 uint64_t hos_used_memory(uint64_t base) {
     static int old = -1;
-    if (old < 0) old = env_on("HOS_MEMINFO_OLD");
+    if (old < 0) old = !env_on("HOS_MEMINFO_NEW");   /* (Mako 4.1.1: base alone by default, as 4.1; HOS_MEMINFO_NEW=1: the new figure) */
     if (old) return base;
     LOCK();
     const uint64_t mapped = mapped_bytes;
