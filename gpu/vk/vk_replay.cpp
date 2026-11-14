@@ -1730,6 +1730,11 @@ void submit_memory_work(uint64_t value) {
         a += std::chrono::duration<double, std::milli>(m1 - m0).count();
         b += std::chrono::duration<double, std::milli>(m2 - m1).count();
         c += std::chrono::duration<double, std::milli>(m3 - m2).count();
+        // (Mako: and any over 8 ms on its own, which part: the field tour's "slow submit: 16 ms: memory sync 16" on the game's thread)
+        const double ta = std::chrono::duration<double, std::milli>(m1 - m0).count(), tb = std::chrono::duration<double, std::milli>(m2 - m1).count(),
+                     tc = std::chrono::duration<double, std::milli>(m3 - m2).count();
+        static int slow_told;
+        if (ta + tb + tc > 8 && slow_told++ < 200) logf("vk: slow memory work %.1f ms: maps %.1f, capture taken %.1f, writes collected %.1f", ta + tb + tc, ta, tb, tc);
         if (++k % 600 == 0) {
             logf("vk: a submit's memory work (ms): maps %.2f, capture taken %.2f, writes collected %.2f", a / 600, b / 600, c / 600);
             a = b = c = 0;

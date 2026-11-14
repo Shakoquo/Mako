@@ -1671,6 +1671,12 @@ bool take_capture(std::unique_ptr<Capture> c, uint64_t value, uint64_t completed
         // 35-45 fps instead of 55, issue 995)
         const auto tw = std::chrono::steady_clock::now();
         vk_timeline_wait(c->late_value);
+        {   // (Mako: a long one on its own: the game's thread waited for the GPU)
+            const double w = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tw).count();
+            static int told;
+            if (w > 4 && told++ < 200) logf("vk: capture waited %.1f ms for the GPU (late pages of submission %llu, %zu pages)", w,
+                                            (unsigned long long)c->late_value, c->late.size());
+        }
         st_tk_late += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tw).count();
         st_tk_late_n++;
         uint8_t* const base = (uint8_t*)host->guest_base();
