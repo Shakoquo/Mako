@@ -2983,7 +2983,10 @@ void retired_imports_give_back() {   // (pools_mu held)
 #ifdef _WIN32
     // (not on NVIDIA: kept there, ~20 areas of play left 6.8 GB of retired pools imported on an RTX 3070 (8 GB), and the next area
     // lost the device, twice; given back, the same tour finished every area (issue 1057). The losses above were Intel's and AMD's)
-    static const bool keep = getenv("RX_VK_KEEP_RETIRED") ? getenv("RX_VK_KEEP_RETIRED")[0] != '0' : dev.props.vendorID != 0x10DE;
+    // (Mako 4.1.1: given back on AMD too. Kept, they filled AMD cards in every 4.1 report: 1.1-2.9 GB of retired pools after
+    // 15-30 min, VRAM at 100% on 12 GB cards, device lost (RX 6700 XT, 7800 XT), 16 fps in the market (6750 XT), paging on
+    // 16 GB PCs. Given back on an RX 9060 XT since 2026-11-10, many sessions, no device lost. Kept only on Intel now)
+    static const bool keep = getenv("RX_VK_KEEP_RETIRED") ? getenv("RX_VK_KEEP_RETIRED")[0] != '0' : dev.props.vendorID == 0x8086;
 #else
     static const bool keep = getenv("RX_VK_KEEP_RETIRED") && getenv("RX_VK_KEEP_RETIRED")[0] != '0';
 #endif
@@ -3080,7 +3083,8 @@ void imports_give_back() {   // (pools_mu held)
     // device losses on Intel Arc and AMD right after imports went back): RX_VK_IMPORT_HIGH=85 turns it on there
     static const char* env_high = getenv("RX_VK_IMPORT_HIGH");
 #ifdef _WIN32
-    static const int high = env_high ? atoi(env_high) : 0;
+    // (Mako 4.1.1: on by default where the heap's budget is small, as on Linux: 16 GB PCs paged to disk in 4.1 reports)
+    static const int high = env_high ? atoi(env_high) : (dev.props.vendorID == 0x8086 ? 0 : 85);
 #else
     static const int high = env_high ? atoi(env_high) : 85;
 #endif

@@ -668,7 +668,7 @@ class LauncherForm : Form {
     float helpFade; string helpShown = "";
     PointF mouse = new PointF(-1, -1);
     Widget pressed;
-    bool loading;
+    bool loading, vramTooHigh;
     // (update card)
     Color updDot = Theme.Faint; string updTitle = "Checking for updates…", updLine = "";
     float updProgress = -1;  // (-1: none; else 0..1)
@@ -732,6 +732,15 @@ class LauncherForm : Form {
     /// (Mako 4.1) the texture cap advised for a card: what is left once the game's other video memory (render targets, buffers,
     /// pipelines: ~3.5-4 GB in Hyrule Field) is set aside from 90% of the card, in 512 MB steps; at most 6 GB up to 16 GB cards
     /// (more filled them past what they hold), 8 GB above; at least 1 GB; 2.5 GB on a GPU sharing the PC's RAM
+    // The slider's end: 60% of the card, at least the recommended value, at most 10 GB. (4.1 went to the card less 2 GB: testers
+    // set 9.5 GB on 12 GB cards and 11 GB on 16 GB ones; with the game's other video memory (~3.5-6 GB) the card was full)
+    public static int VramMaxMB(long cardMB, bool integrated) {
+        if (cardMB <= 0) return 6144;
+        int rec = RecommendedVramMB(cardMB, integrated);
+        int m = (int)(cardMB * 6 / 10) / 512 * 512;
+        return Math.Max(Math.Max(rec, 2048), Math.Min(10240, m));
+    }
+
     public static int RecommendedVramMB(long cardMB, bool integrated) {
         if (integrated) return 2560;
         if (cardMB <= 0) return 0;
@@ -844,7 +853,7 @@ class LauncherForm : Form {
             int card = (int)pcNow.VramMB;
             vramSlider = new VramSlider { Page = 1, R = new RectangleF(cx, 112 + (GraphicsRows.Length + 1) / 2 * 70, cw, 62), CardMB = card,
                                           RecMB = RecommendedVramMB(card, pcNow.Integrated),
-                                          MaxMB = Math.Max(4096, card > 0 ? Math.Min(16384, (card - 2048) / 512 * 512) : 8192) };
+                                          MaxMB = VramMaxMB(card, pcNow.Integrated) };
             vramSlider.Changed = v => { if (!loading) SaveEnv(); };
             widgets.Add(vramSlider);
         }
@@ -907,6 +916,7 @@ class LauncherForm : Form {
         widgets.Add(new Btn { Text = "Apply these", Style = Btn.Kind.Primary, R = new RectangleF(cx + 312, 612, cw - 312, 42), Page = 0, Click = OnApplyRecommended });
 
         LoadAll();
+        if (vramTooHigh) { vramTooHigh = false; SaveEnv(); }
         int first;
         string[] cmd = Environment.GetCommandLineArgs();
         ShowPage(cmd.Length > 2 && int.TryParse(cmd[2], out first) && first >= 0 && first <= 8 ? first : 0);
@@ -1378,8 +1388,9 @@ class LauncherForm : Form {
         string vm; int vmb;
         if (vramSlider != null)
             vramSlider.ValueMB = env.TryGetValue("RX_VK_VRAM_MB", out vm) && int.TryParse(vm, out vmb) && vmb > 0
-                                     ? Math.Max(vramSlider.MinMB, Math.Min(Math.Max(vramSlider.MaxMB, vmb), vmb)) : 0;
-        if (vramSlider != null && vramSlider.ValueMB > vramSlider.MaxMB) vramSlider.MaxMB = vramSlider.ValueMB;
+                                     ? Math.Max(vramSlider.MinMB, vmb) : 0;
+        // (4.1.1: a cap set past the safe maximum in 4.1 (9.5 GB on a 12 GB card filled it: device lost) comes back to it, saved)
+        if (vramSlider != null && vramSlider.ValueMB > vramSlider.MaxMB) { vramSlider.ValueMB = vramSlider.MaxMB; vramTooHigh = true; }
         string rs;
         if (env.TryGetValue("RX_VK_REDSTONE", out rs) && rs == "1" && settings["frame_generation"].Value == 2)
             settings["frame_generation"].Index = settings["frame_generation"].Items.Length - 1;
