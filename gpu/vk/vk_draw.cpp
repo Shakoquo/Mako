@@ -7276,6 +7276,19 @@ void draw(VkCommandBuffer cmd, NvnState& s, const DrawArgs& d) {
                      (unsigned long long)cp->key);
             return;
         }
+        // (Mako 4.1.1, from Project ReLink 3af2a28) OoT's 2b37a33d189014a8 and 0948a49a3c3068a8: two small box draws into a
+        // half-size HDR target that read the 128 x 72 x 96 volume textures, every frame. On an RTX 5070 Ti the device was lost as
+        // soon as Link entered water, both reports naming these two as the only draws in flight; on an RTX 3060 Ti Link's skin,
+        // hair and belt came out white in the Market fountain, normal without them, and the Market and Kokiri Forest looked the
+        // same without them. Left out until what they compute is translated right; RX_VK_FOG_BOXES=1 runs them as before
+        static const bool fog_boxes = getenv("RX_VK_FOG_BOXES") && atoi(getenv("RX_VK_FOG_BOXES")) != 0;
+        if (!fog_boxes && (cp->key == 0x2b37a33d189014a8ull || cp->key == 0x0948a49a3c3068a8ull)) {
+            static std::atomic<int> told{0};
+            if (told++ < 2)
+                logf("vk: draws of program %016llx left out: a GPU hang in water on RTX 50 cards, Link white in water elsewhere "
+                     "(RX_VK_FOG_BOXES=1 runs them)", (unsigned long long)cp->key);
+            return;
+        }
         // (the list parsed once into key prefixes: it was a snprintf and a string compare on every draw)
         static const std::vector<std::pair<uint64_t, uint64_t>> skip_keys = [] {   // (value, mask) of each prefix
             std::vector<std::pair<uint64_t, uint64_t>> v;
