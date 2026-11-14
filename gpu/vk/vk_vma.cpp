@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <vector>
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 
 #ifndef HOOKSHOT_ENV_H   // (env_on: the switches' one rule)
@@ -239,6 +241,8 @@ namespace {
 VmaDefragmentationContext compact_ctx = VK_NULL_HANDLE;
 VmaDefragmentationPassMoveInfo compact_pass{};
 bool compact_in_pass = false;
+// (Mako 4.1.1) held over a compaction pass's start and end, and by the image reaper below over each destruction
+std::mutex compact_mu;
 bool compact_over(uint64_t* freed_bytes, uint32_t* freed_blocks) {
     VmaDefragmentationStats st{};
     vmaEndDefragmentation(vma, compact_ctx, &st);
@@ -259,6 +263,7 @@ bool image_compact_begin(uint64_t max_bytes_a_pass, uint32_t max_moves_a_pass) {
 bool image_compact_active() { return compact_ctx != VK_NULL_HANDLE; }
 bool image_compact_pass(std::vector<ImageMove>& moves, uint64_t* freed_bytes, uint32_t* freed_blocks) {
     moves.clear();
+    std::lock_guard lk(compact_mu);
     if (!compact_ctx || compact_in_pass) return false;
     const VkResult r = vmaBeginDefragmentationPass(vma, compact_ctx, &compact_pass);
     if (r != VK_INCOMPLETE) return compact_over(freed_bytes, freed_blocks);   // (VK_SUCCESS: nothing left to move; or an error)
@@ -275,6 +280,7 @@ void image_compact_ignore(size_t i) {
         compact_pass.pMoves[i].operation = VMA_DEFRAGMENTATION_MOVE_OPERATION_IGNORE;
 }
 bool image_compact_pass_end(uint64_t* freed_bytes, uint32_t* freed_blocks) {
+    std::lock_guard lk(compact_mu);
     if (!compact_ctx || !compact_in_pass) return false;
     compact_in_pass = false;
     if (vmaEndDefragmentationPass(vma, compact_ctx, &compact_pass) == VK_INCOMPLETE) return true;
@@ -320,7 +326,52 @@ bool create_image(const VkImageCreateInfo& ci, VkImage& image, VmaAllocation& al
     if (told++ < 4) logf("vk: VRAM full: a %ux%u image (format %d) in system memory", ci.extent.width, ci.extent.height, (int)ci.format);
     return true;
 }
+// (Mako 4.1.1, from Project ReLink 3168901) The images are destroyed on a thread of their own (the reaper). On NVIDIA's Windows
+// driver a vmaDestroyImage is a kernel call of a millisecond or more, and the render thread destroyed the dead textures one
+// after the other as it presented: in ReLink's Market camera turns, 2.4 ms of each frame over 25 ms, and fewer such frames
+// with it. Every caller destroys an image the GPU is done with, so only the time its memory goes back changes. Each
+// destruction under compact_mu: never beside a compaction pass's start or end. RX_VK_REAP=0: on the caller's thread, as before
+namespace {
+std::mutex reap_mu;
+std::condition_variable reap_cv;
+std::vector<std::pair<VkImage, VmaAllocation>> reap_queue;
+bool reap_on() {
+    static const bool on = [] {
+        const char* e = getenv("RX_VK_REAP");
+        if (e && *e && atoi(e) == 0) return false;
+        std::thread([] {
+            SetThreadDescription(GetCurrentThread(), L"mkw_vk image reaper");
+            std::vector<std::pair<VkImage, VmaAllocation>> batch;
+            for (;;) {
+                {
+                    std::unique_lock lk(reap_mu);
+                    reap_cv.wait(lk, [] { return !reap_queue.empty(); });
+                    batch.swap(reap_queue);
+                }
+                for (auto& [img, a] : batch) {
+                    std::lock_guard lk(compact_mu);
+                    vmaDestroyImage(vma, img, a);
+                }
+                batch.clear();
+            }
+        }).detach();
+        logf("vk: images destroyed on a thread of their own (RX_VK_REAP=0: on the caller's)");
+        return true;
+    }();
+    return on;
+}
+}
 void destroy_image(VkImage image, VmaAllocation allocation) {
+    if (!image && !allocation) return;
+    if (reap_on()) {
+        {
+            std::lock_guard lk(reap_mu);
+            reap_queue.push_back({image, allocation});
+        }
+        reap_cv.notify_one();
+        return;
+    }
+    std::lock_guard lk(compact_mu);
     vmaDestroyImage(vma, image, allocation);
 }
 uint64_t allocation_size(VmaAllocation allocation) {
