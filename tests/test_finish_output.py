@@ -80,7 +80,7 @@ class FinishOutputTests(unittest.TestCase):
         self.assertEqual((self.out / "image.bin").read_bytes(), b"existing synthetic image")
 
     def assert_no_staging_files(self):
-        self.assertEqual(sorted(path.name for path in self.out.iterdir()), ["image.bin", "hookshot.exe"])
+        self.assertEqual(sorted(path.name for path in self.out.iterdir()), ["hookshot.exe", "image.bin"])
 
     def stopped_output(self):
         output = io.StringIO()
