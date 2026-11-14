@@ -627,6 +627,9 @@ void drop_all() {
 
 void temporal_later(std::function<void()> f) { later(std::move(f)); }
 
+namespace {
+std::atomic<uint64_t> cam_fast_frame{UINT64_MAX}, cam_fast_area{0};   // (temporal_note_scene_draw's quick check: the noted camera's frame and size)
+}
 void temporal_note_scene_draw(const Texture* color0, uint32_t width, uint32_t height, Texture* depth, uint64_t camera,
                               uint64_t camera_size) {
     // (only a size the gameplay upscale's output can come from: 1 to 3 times smaller. A smaller target with a camera (the
@@ -636,8 +639,12 @@ void temporal_note_scene_draw(const Texture* color0, uint32_t width, uint32_t he
     // (with the Upscaler Off too: its stretch takes the fixed shares' networks only with the frame's scene as their input)
     if (color0->format != VK_FORMAT_B10G11R11_UFLOAT_PACK32 || (!temporal_wanted() && !temporal_off())) return;
     State& s = st();
-    std::lock_guard lk(s.mu);
     const uint64_t now = texture_frame_no();
+    // (Mako 4.1.1, cores: the frame's camera already noted from a target this size or larger, without the lock. Every scene
+    // draw came here and took s.mu: with the replay on several threads (RX_VK_PARALLEL) it was the third lock they waited on)
+    if (cam_fast_frame.load(std::memory_order_acquire) == now && (uint64_t)width * height <= cam_fast_area.load(std::memory_order_relaxed))
+        return;
+    std::lock_guard lk(s.mu);
     if (s.cam.valid && s.cam.frame == now && (uint64_t)width * height <= (uint64_t)s.cam.width * s.cam.height)
         return;   // (the largest one of the frame wins)
     float c[0x230 / 4];
@@ -659,6 +666,8 @@ void temporal_note_scene_draw(const Texture* color0, uint32_t width, uint32_t he
     k.fov_y = plain ? 2.0f * std::atan(1.0f / p11) : 0.0f;
     k.width = width, k.height = height, k.depth = depth, k.depth_gen = texture_destroy_generation(), k.frame = now;
     k.valid = true;
+    cam_fast_area.store((uint64_t)width * height, std::memory_order_relaxed);
+    cam_fast_frame.store(now, std::memory_order_release);
 }
 
 bool temporal_scene_size(uint32_t width, uint32_t height) {
@@ -787,6 +796,7 @@ bool stretch(VkCommandBuffer cmd, uint64_t key, bool known, Texture* in, VkImage
         note_output(out, out_level);
     }
     s.cam.valid = false;   // (each frame's own camera)
+    cam_fast_frame.store(UINT64_MAX, std::memory_order_release);
     if (!make_pipelines()) {
         static bool told = false;
         if (!told) told = true, logf("vk: upscaler: Off: its shader was not made: the game's upscale runs");
@@ -847,6 +857,7 @@ bool temporal_upscale(VkCommandBuffer cmd, uint64_t key, bool known, Texture* in
     if (known && out && out->format == VK_FORMAT_B10G11R11_UFLOAT_PACK32) note_output(out, out_level);
     const Camera cam = s.cam;
     s.cam.valid = false;   // (each frame's own camera)
+    cam_fast_frame.store(UINT64_MAX, std::memory_order_release);
     struct SkinsDone {     // (the skinned draws, each frame's own too: actor_motion takes them, or they go here)
         State& s;
         ~SkinsDone() { s.skins.clear(); }
