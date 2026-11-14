@@ -44,8 +44,10 @@ import kit
 import lifted_c
 import rtgen
 import logo_rgba
+import object_store
 import ui_fonts
 import toolchain
+import translator_files
 import version
 import win_manifest
 
@@ -55,6 +57,9 @@ OPUS = os.path.join(kit.HERE, "..", "third_party", "opus")
 ZSTD = os.path.normpath(os.path.join(kit.HERE, "..", "third_party", "zstd", "lib"))
 ZSTD_HOST = ("prompts.c", "hos_zstd.c")   # (the host files that use it: a mod's size table; the game's stream decode)
 OBJ_CACHE = os.path.join(kit.WORK, "objcache")
+# (HOOKSHOT_OBJ_STORE: one store of objects for every work folder, nx2/object_store.py. Its folder for this work folder's compiler
+# and headers, or None)
+OBJ_STORE = object_store.folder(kit.WORK)
 # (hookshot) work/hot_order.txt: the functions that run, hottest first (sampled), packed together by the linker; RX_NO_ORDER=1: off
 PGO = os.environ.get("RX_PGO", "")
 
@@ -214,8 +219,11 @@ NGX_SDK = ngx_sdk(os.environ.get("HOOKSHOT_NGX_SDK", ""), LINUX)
 NGX_MSVC_RT = "vk_ngx_msvc_rt.cpp"
 # HOOKSHOT_FSR=1: the Vulkan back end with AMD FSR 4 (gpu/vk/vk_fsr4.cpp), from AMD's FSR API headers (third_party/fidelityfx,
 # MIT). AMD's signed DLLs are not part of the build: the user's, loaded at run time. Off without it (make_game.py --fsr sets
-# it; the camera jitter it needs is in every build: nx2/oot_jitter.py)
+# it; the camera jitter it needs is in every build: nx2/oot_jitter.py). The AppImage's prebuilt back end has none, so a Linux
+# build with it compiles its own, as with NVIDIA DLSS (prebuilt_renderer), from the headers the AppImage carries (FSR_HEADERS,
+# which make_game.py's Linux check looks for before the game is read)
 FSR = os.environ.get("HOOKSHOT_FSR", "") == "1"
+FSR_HEADERS = os.path.join(kit.HERE, "..", "third_party", "fidelityfx")
 
 
 def ngx_link(sdk, mingw):
@@ -309,8 +317,8 @@ def vulkan_headers(work=None):
 
 
 def prebuilt_renderer():
-    # The AppImage's renderer has no NGX: an SDK build compiles its own instead.
-    return "" if NGX_SDK else os.environ.get("HOOKSHOT_VK_PREBUILT", "")
+    # The AppImage's renderer has neither NGX nor AMD FSR 4: a build with either compiles its own instead.
+    return "" if NGX_SDK or FSR else os.environ.get("HOOKSHOT_VK_PREBUILT", "")
 
 
 def cache_put(obj, key):
@@ -339,6 +347,19 @@ class ProcessMemory(ctypes.Structure):   # (Windows' PROCESS_MEMORY_COUNTERS, fo
 # (what one compiler is counted at where its own need is not worked out: a hot piece (0.8-1.7 GB measured, -O2 and the profile),
 # and the compile countdown's guess of how many the free memory holds. About the median chunk's peak)
 COMPILER_MB = 1500
+
+# HOOKSHOT_SPLIT_GIANTS (nx2/split_giants.py): the lifted functions of split_giants.MIN_KB or more are compiled as pieces cut at
+# their labels, with a dispatch loop under the function's own name (compile_one compiles that copy; the lifted files stay as the
+# lift wrote them, so its patches, cuts and lists never see the pieces). On by default at split_giants.PIECE_KB (8): a whole
+# first build's compile 1,347 -> 1,057 s on a Ryzen 5 5600. "0": off; a number: the pieces' size in KB
+def split_giants_flags():
+    """The flag the lifted chunks carry when their giants are split (split_giants.FLAG: the piece size and the splitter's own
+    hash, so a change of either builds them again); [] when off"""
+    raw = os.environ.get("HOOKSHOT_SPLIT_GIANTS", "").strip()
+    if raw == "0":
+        return []
+    import split_giants
+    return [split_giants.flag(int(raw) if raw.isdigit() else split_giants.PIECE_KB)]
 
 
 def free_mb():
@@ -448,8 +469,14 @@ def mem_need(src):
     if name.startswith("code_"):
         with open(src, "rb") as f:
             text = f.read()
-        # (each function from the newline before its definition, as this was first measured)
-        starts = [m.start() - 1 for m in lifted_c.HEAD_BYTES.finditer(text)] + [len(text)]
+        # (each function from the newline before its definition, as this was first measured; a giant's pieces are functions
+        # of their own: split_giants.py, the copy compile_one compiles)
+        starts = [m.start() - 1 for m in lifted_c.HEAD_BYTES.finditer(text)]
+        i = text.find(b"\nstatic __attribute__((noinline)) uintptr_t s_")
+        while i >= 0:
+            starts.append(i)
+            i = text.find(b"\nstatic __attribute__((noinline)) uintptr_t s_", i + 1)
+        starts = sorted(starts) + [len(text)]
         largest = max([b - a for a, b in zip(starts, starts[1:])] or [0])
         return int(400 + 50 * len(text) / (1 << 20) + 250 * largest / (1 << 20))
     return 1000 if src.endswith(".cpp") else 400
@@ -963,10 +990,14 @@ def compile_one(job):
             shutil.copyfile(cached, obj)
         open(stamp, "w").write(key)
         return src, 0.0, None
-    lease = GATE.enter(src) if GATE else None
+    c_src = src
+    if any(f.startswith("-DHOOKSHOT_SPLIT_GIANTS=") for f in fl):   # (HOOKSHOT_SPLIT_GIANTS: a copy with the giants cut, if any)
+        import split_giants
+        c_src = split_giants.compile_copy(src, obj, fl)
+    lease = GATE.enter(c_src) if GATE else None
     t = time.time()
     try:
-        with subprocess.Popen([cc] + fl + ["-c", src, "-o", obj], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as p:
+        with subprocess.Popen([cc] + fl + ["-c", c_src, "-o", obj], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as p:
             no_throttle(getattr(p, "_handle", None))
             if GATE:
                 GATE.started(lease, p)
@@ -974,6 +1005,8 @@ def compile_one(job):
     finally:
         if GATE:
             GATE.leave(lease)
+        if c_src != src and os.path.exists(c_src):
+            os.remove(c_src)
     r = subprocess.CompletedProcess(p.args, p.returncode, out, err)
     if r.returncode:
         failure = r.stderr or r.stdout or "Compiler exited with status %d without diagnostics." % r.returncode
@@ -1068,7 +1101,7 @@ def main():
             hot_fl = hot_fl + ["-fprofile-instr-use=" + PGO, "-DHOOKSHOT_PROFILE_SHA1=" + hashlib.sha1(f.read(), usedforsecurity=False).hexdigest()[:16]]
     # (Mako) the builder's fast build: the costliest chunks (about RX_FAST_SHARE of the lifted code) at -O0, which compiles them
     # about three times sooner. Not all of them: every chunk at -O0 makes an exe over 2 GB, which Windows will not load
-    fast_fl, fast = [("-O0" if f == "-" + a.opt else f) for f in fl], set()
+    fast_fl, fast = [("-O0" if f == "-" + OPT else f) for f in fl], set()
     share = float(os.environ.get("RX_FAST_SHARE", "0") or 0)
     if share > 0:
         cold = [s for s in srcs if os.path.basename(s).startswith("code_") and not os.path.basename(s).startswith("code_hot")]
@@ -1083,9 +1116,13 @@ def main():
                 continue
             fast.add(s); done += os.path.getsize(s)
         print("fast build: %d of %d chunks at -O0" % (len(fast), len(cold)), flush=True)
+    split_fl = fl + split_giants_flags()   # (the lifted chunks; not the hot pieces, whose profile was counted on the whole functions)
     jobs = [(cc, s, os.path.join(obj_dir, os.path.basename(s)[:-2] + ".o"),
-             hot_fl if os.path.basename(s).startswith("code_hot") else (fast_fl if s in fast else fl),
+             hot_fl if os.path.basename(s).startswith("code_hot") else (fast_fl if s in fast else
+             split_fl if os.path.basename(s).startswith("code_") and os.path.dirname(s) == gen else fl),
              shim_deps if os.path.dirname(s) == NX2_RT else deps) for s in srcs]
+    if KEPT and OBJ_STORE:   # (a kept object the folder let go that another work folder gave the store)
+        object_store.fetch(OBJ_STORE, OBJ_CACHE, [k[0] for k in KEPT.values()])
     if KEPT:   # (the kept translation is used only as it was: the same flags and headers, and every object still cached)
         stale = [os.path.basename(j[1]) for j in jobs if j[1] in KEPT and not os.path.exists(j[1]) and
                  (kept_part(j[3], j[4]) != KEPT[j[1]][2] or not os.path.exists(os.path.join(OBJ_CACHE, KEPT[j[1]][0] + ".o")))]
@@ -1190,18 +1227,13 @@ def main():
         fonts_cpp = os.path.join(gen_dir, "ui_fonts.cpp")
         ui_fonts.write(fonts_cpp)
         # (what the shader caches are good for: what translates shaders, not the whole DLL, so a build that changes something else
-        # keeps them)
-        stamp = hashlib.sha1(usedforsecurity=False)
-        translator = [os.path.join(d, f) for top in ("eden", "sirit", "compat") for d, _, fs in os.walk(os.path.join(vk, top)) for f in fs]
-        for f in sorted(translator) + [os.path.join(vk, n) for n in ("vk_shader.cpp", "vk_bank.cpp", "vk_state.h", "vk_api.h")]:
-            with open(f, "rb") as src:
-                stamp.update(os.path.relpath(f, vk).replace("\\", "/").encode() + src.read().replace(bytes((13, 10)), bytes((10,))))
+        # keeps them: nx2/translator_files.py names it, for scripts/dev_packs.py and the bake tools too)
         # (HOOKSHOT_SHADER_STAMP=<16 hex>: that stamp instead, for a change to these files that does not change what translation makes
         # (when a program is parsed, not how): the players' program caches are kept)
         # (Mako 4.1) nx2/shader_stamp_pin.txt, "<pinned stamp> <the files' own stamp it stands for>": while these files still hash to the
         # second, the first is used. A release whose changes to them leave translation as it was ships one, and the players' program
         # caches (7 GB, hours to make again) are kept; any later change to these files no longer matches, and the stamp is the files' own
-        computed = stamp.hexdigest()[:16]
+        computed = translator_files.stamp(vk)
         chosen = os.environ.get("HOOKSHOT_SHADER_STAMP") or ""
         if not chosen:
             try:
@@ -1314,6 +1346,13 @@ def main():
     GATE = None if os.environ.get("HOOKSHOT_MEM_GATE") == "0" else MemoryGate()
     eta_jobs = GATE.expected(a.jobs) if GATE else a.jobs   # (the countdown with the compilers the memory holds, not --jobs)
     counted, expected, pending = os.environ.get("HOOKSHOT_TIMES"), {}, []
+    if OBJ_STORE:   # (the objects this build needs that another work folder built: in the folder's cache before the plan counts them)
+        object_store.share(OBJ_CACHE, OBJ_STORE)   # (the folder's own first, those of a build that stopped before it shared them too)
+        for _, src, obj, fl, deps in jobs:
+            if (src, obj) not in PLANNED and os.path.exists(src):
+                PLANNED[(src, obj)] = key_of(src, fl, deps)
+        got = object_store.fetch(OBJ_STORE, OBJ_CACHE, [PLANNED[(j[1], j[2])] for j in jobs if (j[1], j[2]) in PLANNED])
+        print("object store %s: %d objects from it" % (OBJ_STORE, got), flush=True)
     if counted:
         work_jobs, keys = plan_jobs(jobs)
         PLANNED.update(keys)
@@ -1364,6 +1403,8 @@ def main():
     print("compiled in %.0fs, %d failed" % (time.time() - t0, still), flush=True)
     if still:
         return 1
+    if OBJ_STORE:
+        print("object store: %d new objects to it" % object_store.share(OBJ_CACHE, OBJ_STORE), flush=True)
     if a.standalone and not vk_only:
         write_kept(gen, jobs)
     vk_objs = {j[2] for j in vk_jobs}

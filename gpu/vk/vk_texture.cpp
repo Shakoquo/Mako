@@ -292,6 +292,27 @@ bool compact_on() {   // (hookshot: the textures in a pool of their own, compact
     static const bool v = vram_compact::enabled(getenv("RX_VK_COMPACT"));
     return v;
 }
+// (hookshot) the commit the textures leave free for the rest of the system: texture_frame's commit rule. RX_VK_COMMIT_RESERVE_MB
+// (default 2560, 0: off). Windows only: Linux overcommits, and its limit is not one commit can reach
+static uint64_t commit_reserve() {
+    static const uint64_t v = getenv("RX_VK_COMMIT_RESERVE_MB") ? (uint64_t)std::max(0, atoi(getenv("RX_VK_COMMIT_RESERVE_MB"))) << 20
+                                                                : 2560ull << 20;
+    return v;
+}
+// (what Windows lets the process commit before its limit, RAM plus the page file: GlobalMemoryStatusEx's ullAvailPageFile, the
+// limit less the whole system's commit. false where it cannot be read)
+static bool commit_headroom(uint64_t* free_bytes) {
+#if defined(_WIN32)
+    MEMORYSTATUSEX m{};
+    m.dwLength = sizeof m;
+    if (!GlobalMemoryStatusEx(&m)) return false;
+    *free_bytes = m.ullAvailPageFile;
+    return true;
+#else
+    (void)free_bytes;
+    return false;
+#endif
+}
 uint64_t pool_cap() {
     static const uint64_t mb = getenv("RX_VK_TARGET_POOL_MB") ? (uint64_t)std::max(0, atoi(getenv("RX_VK_TARGET_POOL_MB"))) : 256;
     return mb << 20;
@@ -483,7 +504,7 @@ Staging staging(uint64_t n, uint64_t align = 256) {
         // out, and a scene change made several right after the idle ones were freed)
         const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_make).count();
         static int slow_logged;
-        if (ms > 5 && slow_logged++ < 24) logf("vk: a staging arena of %llu MB took %.1f ms to make", (unsigned long long)(a.size >> 20), ms);
+        if (ms > 5 && slow_logged++ < 24) logf_at(log_debug, "vk: a staging arena of %llu MB took %.1f ms to make", (unsigned long long)(a.size >> 20), ms);
     }
     a.mapped = (uint8_t*)m;
     a.value = rec_value, a.used = n;
@@ -526,14 +547,15 @@ bool astc_ready() {
     mi.codeSize = sizeof ASTC_DECODER_COMP_SPV;
     mi.pCode = ASTC_DECODER_COMP_SPV;
     VkShaderModule m = VK_NULL_HANDLE;
-    if (vkCreateShaderModule(dev.device, &mi, nullptr, &m) != VK_SUCCESS) return false;
+    IntelDriverGate gate;
+    if (extern_guarded_shader_module(&mi, &m) != VK_SUCCESS) return false;
     VkComputePipelineCreateInfo ci{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
     ci.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ci.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     ci.stage.module = m;
     ci.stage.pName = "main";
     ci.layout = astc_layout;
-    const VkResult r = vkCreateComputePipelines(dev.device, VK_NULL_HANDLE, 1, &ci, nullptr, &astc_pipe);
+    const VkResult r = extern_guarded_compute(VK_NULL_HANDLE, &ci, &astc_pipe);
     vkDestroyShaderModule(dev.device, m, nullptr);
     if (r != VK_SUCCESS) return false;
     state = 1;
@@ -727,14 +749,15 @@ bool bc_ready() {
         mi.codeSize = bytes;
         mi.pCode = code;
         VkShaderModule m = VK_NULL_HANDLE;
-        if (vkCreateShaderModule(dev.device, &mi, nullptr, &m) != VK_SUCCESS) return false;
+        IntelDriverGate gate;
+        if (extern_guarded_shader_module(&mi, &m) != VK_SUCCESS) return false;
         VkComputePipelineCreateInfo ci{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
         ci.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         ci.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
         ci.stage.module = m;
         ci.stage.pName = "main";
         ci.layout = bc_layout;
-        const VkResult r = vkCreateComputePipelines(dev.device, VK_NULL_HANDLE, 1, &ci, nullptr, &pipe);
+        const VkResult r = extern_guarded_compute(VK_NULL_HANDLE, &ci, &pipe);
         vkDestroyShaderModule(dev.device, m, nullptr);
         return r == VK_SUCCESS;
     };
@@ -1156,14 +1179,15 @@ bool unswizzle_ready() {
     mi.codeSize = sizeof BLOCK_LINEAR_UNSWIZZLE_2D_COMP_SPV;
     mi.pCode = BLOCK_LINEAR_UNSWIZZLE_2D_COMP_SPV;
     VkShaderModule m = VK_NULL_HANDLE;
-    if (vkCreateShaderModule(dev.device, &mi, nullptr, &m) != VK_SUCCESS) return false;
+    IntelDriverGate gate;
+    if (extern_guarded_shader_module(&mi, &m) != VK_SUCCESS) return false;
     VkComputePipelineCreateInfo ci{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
     ci.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ci.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     ci.stage.module = m;
     ci.stage.pName = "main";
     ci.layout = unsw_layout;
-    const VkResult r = vkCreateComputePipelines(dev.device, VK_NULL_HANDLE, 1, &ci, nullptr, &unsw_pipe);
+    const VkResult r = extern_guarded_compute(VK_NULL_HANDLE, &ci, &unsw_pipe);
     vkDestroyShaderModule(dev.device, m, nullptr);
     if (r != VK_SUCCESS) return false;
     state = 1;
@@ -3594,10 +3618,22 @@ void texture_written(Texture* tex, const char* why) {
     tex->only_cleared = false;
     if (tex->sparse && !tex->gpu_written) {
         static int logged;
-        if (logged++ < 20) logf("vk: sparse texture %#llx written by the GPU (#%u)", (unsigned long long)tex->gpu, tex->id);
+        if (logged++ < 20) logf_at(log_debug, "vk: sparse texture %#llx written by the GPU (#%u)", (unsigned long long)tex->gpu, tex->id);
     }
     watch_tex(tex, "written");
     if (!tex->gpu_written || tex->released) tex->first_written = frame_no, drawn_writeback_note(tex);
+    // (hookshot) A texture in a virtual pool that the GPU writes first is marked uploaded below without the first upload,
+    // which notes its pages' mapping (texture_touch): its first check after the game finalized it took all of its storage
+    // for remapped, and the whole image was uploaded from guest memory over the GPU's texels (OoT's HUD button labels blank
+    // after a zone change). Noted here instead, by the writers that give a reason: each holds the ParLock a change to the
+    // map needs, or is the dry pass (tests/test_drawn_page_map.py lists them). The upscaler's stand-ins give none and run
+    // without that lock. A texture clear gives none: resolve() samples its texture first, which notes the map, unless
+    // only writers that give none wrote it before (then as before). RX_VK_NO_DRAWN_PAGE_MAP=1: as before
+    static const bool note_map = !env_on("RX_VK_NO_DRAWN_PAGE_MAP");
+    if (why && strcmp(why, "?") != 0 && note_map && tex->gpu >= (1ull << 40) && tex->page_map.empty() && tex->guest_size) {
+        static thread_local Ranges mapped;
+        texture_dirty(*tex, 0, mapped);
+    }
     tex->last_written = frame_no;
     tex->gpu_written = true;
     tex->gpu_gen = memory_generation();
@@ -4396,6 +4432,29 @@ void texture_frame(uint64_t completed) {
         budget = std::min(budget, total_bytes > over ? total_bytes - over : 0);
         rule_budget = std::min(rule_budget, total_bytes > over ? total_bytes - over : 0);
     }
+    // (hookshot) and Windows' commit limit (RAM plus the page file): every VRAM block is charged to the process's commit, as the
+    // guest's memory is. A run on an RTX 4060 Ti held private commit at the VRAM blocks plus ~21 GB the whole way (19.3 GB at the
+    // start, 35.4 GB in Hyrule Field with 13.3 GB of blocks); a 16 GB PC with a fixed 32 GB page file reached its 47.9 GB limit at
+    // 33.9 GB of its own, a guest commit failed while an area loaded, and the game's next write there crashed it. Below the reserve
+    // the shortfall comes off the textures' budget, as the driver's limit's excess does above; the eviction and the compaction
+    // then give blocks back. RX_VK_COMMIT_RESERVE_MB=<MB> (default 2560; 0: off)
+    {
+        uint64_t commit_free = 0;
+        const uint64_t reserve = commit_reserve();
+        if (reserve && commit_headroom(&commit_free) && commit_free < reserve) {
+            const uint64_t over = reserve - commit_free;
+            budget = std::min(budget, total_bytes > over ? total_bytes - over : 0);
+            rule_budget = std::min(rule_budget, total_bytes > over ? total_bytes - over : 0);
+            static uint64_t said_at;
+            if (!said_at || frame_no - said_at >= 600) {
+                said_at = frame_no;
+                logf("vk: commit limit near: %llu MB of commit left (reserve %llu MB); the textures' budget down to %llu MB of "
+                     "their %llu MB (RX_VK_COMMIT_RESERVE_MB)", (unsigned long long)(commit_free >> 20),
+                     (unsigned long long)(reserve >> 20), (unsigned long long)(budget >> 20),
+                     (unsigned long long)(total_bytes >> 20));
+            }
+        }
+    }
     // (hookshot) the 90% rule and the driver's limit let go of their excess, not of an eighth of the cache: vram_compact.h.
     // RX_VK_EVICT_EXCESS=0: to 7/8 of their budget, as before
     static const bool excess_only = !getenv("RX_VK_EVICT_EXCESS") || atoi(getenv("RX_VK_EVICT_EXCESS")) != 0;
@@ -4719,6 +4778,21 @@ void texture_frame(uint64_t completed) {
         evict.push_back({tex, !no_flush && !overwritten && tex->gpu_written && !tex->released && flushable(*tex), shifted, overwritten});
         pending_bytes += tex->bytes + tex->pad;
         if (by_hold && !overwritten) hold_live += tex->bytes + tex->pad;
+    }
+    {   // (hookshot) nor one whose storage another image was drawn into after its own last drawing (evict_reason.h's
+        // write_back_stale): its write-back puts old texels over memory that is the other image's now, and marks those pages
+        // written. OoT draws its HUD's labels inside the storage of a 1920 x 1080 target it has stopped using; that target's
+        // eviction, ~600 frames later at a 6 GB budget, made the finalized labels upload from memory that never held their
+        // texels: the d-pad and item prompts as noise until the pause menu redrew them
+        std::vector<const Texture*> ts;
+        for (const Evict& e : evict)
+            if (e.flush) ts.push_back(e.tex);
+        if (!ts.empty()) {
+            const std::vector<uint64_t> other = drawn_others(ts);
+            size_t i = 0;
+            for (Evict& e : evict)
+                if (e.flush) e.flush = !evict_reason::write_back_stale(e.tex->last_written, other[i++]);
+        }
     }
     evict_reason::Tally tally;                     // (why each one goes: the retired line below)
     std::unordered_set<const Texture*> flushed_ok;   // (the write-backs that worked)
