@@ -1130,6 +1130,17 @@ def patch_file(s, name, protect_hearts=False):
     if turn != out:
         lines.append("oot_patches: the saved steering rate above 60 fps in " + name)
     out = turn
+    # (Mako 4.2, from Project ReLink bec02c5 and ceb5246) the zstd sequence loop and the name searches, natively
+    zstd = patch_zstd(out) if protect_hearts else None
+    if zstd is not None:
+        out = zstd
+        counts["zstd sequence loop"] += 1
+        lines.append("oot_patches: native zstd sequence loop in " + name)
+    names = patch_names(out) if protect_hearts else None
+    if names is not None:
+        out = names
+        counts["name searches"] += 1
+        lines.append("oot_patches: native name searches in " + name)
     return out, counts, lines
 
 
@@ -1264,8 +1275,6 @@ def apply(gen, *, protect_hearts=False, required=False):
             s = f.read()
         out, c, lines = patch_file(s, os.path.basename(path), protect_hearts)
         counts.append(c)
-        done["zstd sequence loop"] = 0
-        done["name searches"] = 0
         if lines:
             print("\n".join(lines))
         if out != s:
@@ -1304,16 +1313,6 @@ OUT_EDITS = [
      "    if (hos_output_size(0) != 2560 || hos_output_size(1) != 1440) { c->x[24] = (uint32_t)c->x[24] * hos_output_size(0) / 2560; c->x[25] = (uint32_t)c->x[25] * hos_output_size(1) / 1440; }\n"),
     ("    c->x[8] = 0x44f00000ULL;\n    c->x[8] &= 0xFFFFFFFFULL;\n    recomp_store32(c,c->x[19] + 3668,c->x[8]);\n"
      "    c->x[8] = 0x44870000ULL;\n    c->x[8] &= 0xFFFFFFFFULL;\n",
-        zstd = patch_zstd(out) if protect_hearts else None
-        if zstd is not None:
-            out = zstd
-            done["zstd sequence loop"] += 1
-            print("oot_patches: native zstd sequence loop in", os.path.basename(path))
-        names = patch_names(out) if protect_hearts else None
-        if names is not None:
-            out = names
-            done["name searches"] += 1
-            print("oot_patches: native name searches in", os.path.basename(path))
      "    c->x[8] = hos_output_size(0) * 3 / 4;\n    { float _f = (float)c->x[8]; uint32_t _u; memcpy(&_u, &_f, 4); c->x[8] = _u; }\n"
      "    recomp_store32(c,c->x[19] + 3668,c->x[8]);\n"
      "    c->x[8] = hos_output_size(1) * 3 / 4;\n    { float _f = (float)c->x[8]; uint32_t _u; memcpy(&_u, &_f, 4); c->x[8] = _u; }\n"),
