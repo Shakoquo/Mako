@@ -8,6 +8,8 @@
 #include <vk_mem_alloc.h>
 #include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <vector>
 #include <chrono>
@@ -28,6 +30,14 @@ VmaAllocator vma;
 // (Mako tests) the ballast below: off the process's own count and off what the driver allows it, in vram_usage, so the game
 // sizes its budgets as on the smaller card it plays (with it counted, the budgets were a 16 GB card's and filled the rest at once)
 uint64_t ballast_held = 0;
+/// Largest DEVICE_LOCAL heap size in bytes reported by Vulkan physical device memory properties.
+static uint64_t device_local_heap_bytes() {
+    uint64_t heap = 0;
+    for (uint32_t h = 0; h < dev.memory.memoryHeapCount; h++)
+        if (dev.memory.memoryHeaps[h].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) heap = std::max<uint64_t>(heap, test_vram_bytes(dev.memory.memoryHeaps[h].size));   // (RX_VK_TEST_VRAM_MB, #1107)
+    return heap;
+}
+
 bool vma_init(PFN_vkGetInstanceProcAddr gipa) {
     VmaVulkanFunctions f{};
     f.vkGetInstanceProcAddr = gipa;
@@ -40,7 +50,8 @@ bool vma_init(PFN_vkGetInstanceProcAddr gipa) {
     ci.instance = dev.instance;
     ci.vulkanApiVersion = VK_API_VERSION_1_3;
     ci.pVulkanFunctions = &f;
-    ci.preferredLargeHeapBlockSize = 64ull << 20;   // (64 MB blocks: Eglantine found 256 MB ones wasted VRAM)
+    // (64 MB blocks on > 8 GB cards; 32 MB on <= 8 GB cards to halve fragmentation in default heap 0 blocks)
+    ci.preferredLargeHeapBlockSize = device_local_heap_bytes() <= vram_compact::GLOBAL_MIN_GRAPHICS_REQ ? (32ull << 20) : (64ull << 20);
     const bool ok = vmaCreateAllocator(&ci, &vma) == VK_SUCCESS;
     // (Mako tests) RX_VK_BALLAST_MB=<MB>: that much video memory taken at the start and held, in 256 MB pieces of the card's own
     // memory, as another program would: a 16 GB card plays as a smaller one (8192: an 8 GB card), for the VRAM tests
@@ -76,7 +87,7 @@ VmaPool image_pool = VK_NULL_HANDLE;
 bool image_pool_tried = false;
 // (RX_VK_IMAGE_BLOCK_MB=<n>, 16 and up: the block's size. VMA keeps one block empty for the next image, 128 MB of VRAM that a 64 MB block
 // would halve, at twice the memory objects: the driver allows ~4096, the imported pools take ~2400)
-const uint64_t kImageBlock = (getenv("RX_VK_IMAGE_BLOCK_MB") ? (uint64_t)std::max(16, atoi(getenv("RX_VK_IMAGE_BLOCK_MB"))) : 128u) << 20;
+const uint64_t kImageBlock = (getenv("RX_VK_IMAGE_BLOCK_MB") ? (uint64_t)std::max(16, atoi(getenv("RX_VK_IMAGE_BLOCK_MB"))) : 32u) << 20;
 
 // (hookshot) and the render targets' images in blocks of their own (texture_get's for a target: OoT's transient ones, made and let go
 // all the time). In the same blocks as the textures that stay, each one gone left a hole beside a texture that kept its block: the
@@ -102,26 +113,26 @@ VmaPool target_images_pool() {
     ai.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     uint32_t type = 0;
     if (vmaFindMemoryTypeIndexForImageInfo(vma, &rep, &ai, &type) != VK_SUCCESS) return VK_NULL_HANDLE;
+    const uint64_t block_size =
+        device_local_heap_bytes() <= vram_compact::GLOBAL_MIN_GRAPHICS_REQ ? std::min<uint64_t>(kImageBlock, 16ull << 20) : kImageBlock;
     VmaPoolCreateInfo pi{};
     pi.memoryTypeIndex = type;
-    pi.blockSize = kImageBlock;
+    pi.blockSize = block_size;
     if (vmaCreatePool(vma, &pi, &target_image_pool) != VK_SUCCESS) target_image_pool = VK_NULL_HANDLE;
-    logf("vk: render targets' images from blocks of their own (%llu MB, memory type %u)%s", (unsigned long long)(kImageBlock >> 20),
+    logf("vk: render targets' images from blocks of their own (%llu MB, memory type %u)%s", (unsigned long long)(block_size >> 20),
          type, target_image_pool ? "" : ": not made");
     return target_image_pool;
 }
 
 // (hookshot, RX 7800 XT: part of a pool's blocks made at the start, not when the game first needs them. Each is a vkAllocateMemory of
 // 128 MB, ~170 ms on AMD's driver, on the replay thread: ~70 of them in a walk across Hyrule Field, the frame rate dropping to the low
-// 40s whenever new ground came in. In the pool the sampled textures are made in and no other, 15% of the card's memory, 2 to 24 blocks:
-// vram_compact::blocks_at_start. RX_VK_IMAGE_PREALLOC=<blocks>: that many, 0: none)
+// 40s whenever new ground came in. In the pool the sampled textures are made in and no other, 15% of the card's memory, 2 to 24 blocks,
+// none on an integrated GPU: vram_compact::blocks_at_start. RX_VK_IMAGE_PREALLOC=<blocks>: that many, 0: none)
 static size_t blocks_at_start(bool holds_textures) {
     if (!holds_textures) return 0;
-    uint64_t heap = 0;
-    for (uint32_t h = 0; h < dev.memory.memoryHeapCount; h++)
-        if (dev.memory.memoryHeaps[h].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) heap = std::max<uint64_t>(heap, dev.memory.memoryHeaps[h].size);
     if (const char* e = getenv("RX_VK_IMAGE_PREALLOC")) return (size_t)std::max(0, atoi(e));
-    return (size_t)vram_compact::blocks_at_start(heap, kImageBlock, holds_textures);
+    return (size_t)vram_compact::blocks_at_start(device_local_heap_bytes(), kImageBlock, holds_textures,
+                                                 dev.props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU);
 }
 /// The pool with n blocks made now, or empty when there is no room for them (its blocks made as needed); the blocks made
 static size_t make_pool(VmaPoolCreateInfo pi, size_t n, VmaPool& pool) {
@@ -417,6 +428,11 @@ bool host_cached(VmaAllocation allocation) {
     if (allocation) vmaGetAllocationMemoryProperties(vma, allocation, &f);
     return (f & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) != 0;
 }
+bool host_coherent(VmaAllocation allocation) {
+    VkMemoryPropertyFlags f = 0;
+    if (allocation) vmaGetAllocationMemoryProperties(vma, allocation, &f);
+    return (f & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
+}
 void flush_mapped(VmaAllocation allocation, uint64_t size) {
     if (size) vmaFlushAllocation(vma, allocation, 0, size);
 }
@@ -526,6 +542,50 @@ bool vram_usage(uint64_t* used, uint64_t* budget, uint64_t* block_free) {
     static const uint64_t test_allowed = getenv("RX_VK_TEST_ALLOWED_MB") ? (uint64_t)atoi(getenv("RX_VK_TEST_ALLOWED_MB")) << 20 : 0;
     if (test_allowed && t > test_allowed) t = test_allowed;
     if (ballast_held) u -= std::min(u, ballast_held), t -= std::min(t, ballast_held);
+    // (and RX_VK_TEST_ALLOWED_FILE=<file>: the same bound read from that file's number of MB, looked at again once a second, so
+    // a run can shrink the allowance in play, as Windows does when another program takes VRAM: an RX 6600 went from 7378 to
+    // 5940 MB allowed in Hyrule Field (#1025). A missing file or 0 leaves the driver's)
+    static const char* test_file = getenv("RX_VK_TEST_ALLOWED_FILE");
+    if (test_file) {
+        static std::atomic<uint64_t> file_allowed{0};
+        static std::atomic<int64_t> read_at{0};
+        const int64_t now = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::steady_clock::now().time_since_epoch()).count();
+        if (now - read_at.load(std::memory_order_relaxed) >= 1000) {
+            read_at.store(now, std::memory_order_relaxed);
+            uint64_t mb = 0;
+            if (FILE* fp = fopen(test_file, "r")) {
+                unsigned long long v = 0;
+                if (fscanf(fp, "%llu", &v) == 1) mb = v;
+                fclose(fp);
+            }
+            if ((mb << 20) != file_allowed.load(std::memory_order_relaxed))
+                logf("vk: test allowance (RX_VK_TEST_ALLOWED_FILE): %llu MB%s", (unsigned long long)mb, mb ? "" : " (the driver's)");
+            file_allowed.store(mb << 20, std::memory_order_relaxed);
+        }
+        const uint64_t fa = file_allowed.load(std::memory_order_relaxed);
+        if (fa && t > fa) t = fa;
+    }
+    // (and RX_VK_TEST_ALLOWED_FOLLOW=1: an allowance the count is past is reported as the count, as AMD's Windows driver does
+    // (#933, #1025), so the rule below can be seen at work on any card)
+    static const bool test_follow = env_on("RX_VK_TEST_ALLOWED_FOLLOW");
+    if (test_follow && (test_allowed || test_file) && t && u > t) t = u;
+    // (hookshot) an allowance the driver gives as the count itself is past: AMD's Windows driver, once a process is over what it
+    // allows, reports the allowance as what the process uses. An RX 6600 at 3.4 of 7.2 GB entered Hyrule Field and sat at 5940 of
+    // 5940 MB; another went from 5.3 of 6.5 GB to 6.6 of 6.6, the allowance rising with the count. Taken as it is, the count is
+    // within it: room in the blocks kept the 97% squeeze waiting and the hold's line rose with the count, while the driver paged:
+    // frames of 1.2-15.7 s (#933, #1025). vram_compact::past_allowance makes it a tenth under the count, so every rule sees the
+    // count past it and gives back until the driver reports an allowance over the count again. RX_VK_ALLOWED_AT_COUNT=0: as before
+    static const bool at_count_rule = !getenv("RX_VK_ALLOWED_AT_COUNT") || atoi(getenv("RX_VK_ALLOWED_AT_COUNT")) != 0;
+    if (at_count_rule) {
+        const uint64_t was = t;
+        t = vram_compact::past_allowance(u, t);
+        static std::atomic<int> told{0};
+        if (t != was && told.fetch_add(1, std::memory_order_relaxed) < 8)
+            logf("vk: the driver's allowance is the count itself (%llu MB used of %llu): past it, taken as %llu MB "
+                 "(RX_VK_ALLOWED_AT_COUNT=0: as the driver says)", (unsigned long long)(u >> 20), (unsigned long long)(was >> 20),
+                 (unsigned long long)(t >> 20));
+    }
     *used = u, *budget = t;
     if (block_free) *block_free = f;
     return t != 0;
