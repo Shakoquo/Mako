@@ -10135,7 +10135,9 @@ void precompile_run(void (*progress)(size_t done, size_t total)) {
         if (next.load() >= total + threads.size()) break;
         const auto now = std::chrono::steady_clock::now();
         if (done.load() != last_done) last_done = done.load(), last_change = now;
-        else if (stall_s > 0 && next.load() >= total && now - last_change > std::chrono::seconds(stall_s)) {
+        // (Mako 4.2, from Project ReLink a7bfee5, issue 80) also before every pipeline was handed out, after twice as long: with
+        // every worker inside a driver that never returns (AMD, RX 6600 / 6600 XT) none was, and the start waited for good
+        else if (stall_s > 0 && now - last_change > std::chrono::seconds(next.load() >= total ? stall_s : 2 * stall_s)) {
             std::lock_guard lk(pre->mu);
             pre->abandoned = true;
             gone_on = true;
@@ -10460,7 +10462,8 @@ void predict_run(void (*progress)(size_t done, size_t total), bool background) {
         const auto now = std::chrono::steady_clock::now();
         if (done.load() != last_done) last_done = done.load(), last_change = now;
         else if (const bool faulted = driver_faults() > faults_before;
-                 stall_s > 0 && (faulted || next.load() >= pre->keys.size()) && now - last_change > std::chrono::seconds(stall_s)) {
+                 stall_s > 0 && now - last_change > std::chrono::seconds(faulted || next.load() >= pre->keys.size() ? stall_s : 2 * stall_s)) {
+            // (Mako 4.2, from Project ReLink a7bfee5, issue 80: every worker in the driver for twice as long gives up too)
             pre->abandoned = true;
             gone_on = true;
             prepare_left_workers_note();
