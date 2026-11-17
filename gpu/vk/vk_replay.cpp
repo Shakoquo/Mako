@@ -335,6 +335,21 @@ void wait_lost(const char* what, uint64_t v) {
 }
 } // namespace
 uint64_t vk_timeline_completed() { return timeline ? completed() : 0; }
+/// (Mako 4.2, from Project ReLink 6d63fe7) vk_timeline_wait for ms at most, as it waits (a burst recording's own timeline, else
+/// the queue flushed first); whether v is done. The captures' waits for late pages use it (vk_memory.cpp take_capture)
+bool vk_timeline_wait_for(uint64_t v, uint32_t ms) {
+    if (!timeline || completed() >= v) return true;
+    int ok = 0;
+    if (wait_recorded(v, (uint64_t)ms * 1000000ull, &ok)) return ok != 0 && wait_rec_result != VK_ERROR_DEVICE_LOST;
+    queue_flush_for(FR_VALUE);
+    VkSemaphoreWaitInfo wi{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+    wi.semaphoreCount = 1;
+    wi.pSemaphores = &timeline;
+    wi.pValues = &v;
+    const VkResult res = vkWaitSemaphores(dev.device, &wi, (uint64_t)ms * 1000000ull);
+    if (res == VK_ERROR_DEVICE_LOST) wait_lost("a capture's wait for write-back", v);
+    return res == VK_SUCCESS;
+}
 void vk_timeline_wait(uint64_t v) {   // (at most 250 ms: a submission held back behind the caller's thread goes on without it)
     if (!timeline || completed() >= v) return;
     // (a burst recording whose write-back stamped wb_pages with burst_value does not advance `timeline` while an older queue

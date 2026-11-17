@@ -3097,7 +3097,40 @@ bool take_capture(std::unique_ptr<Capture> c, uint64_t value, uint64_t completed
         // 35-45 fps instead of 55, issue 995)
         if (wait) {
             const auto tw = std::chrono::steady_clock::now();
-            vk_timeline_wait(wait);
+            // (Mako 4.2, from Project ReLink 6d63fe7 and 055eeda) the wait gives up after a cap (the pages are then copied as they
+            // are, as without the wait): the long ones are stalls, 140-220 ms in each arrival in Hyrule Castle while the GPU is
+            // busy with the area's uploads; ReLink measured the time lost in frames of 40 ms and more there 1039 / 1177 ms -> 841 /
+            // 776. The cap follows the GPU: the larger of RX_VK_CAPTURE_WAIT_MAX_MS (20) and four times a running estimate of the
+            // long waits, at most 250 ms, so a slower card's exposure waits are not cut (white flashes on a laptop RTX 3050 Ti).
+            // RX_VK_CAPTURE_WAIT_MAX_MS=0: no cap, as before; RX_VK_CAPTURE_WAIT_ADAPT=0: the fixed cap
+            static const int wait_max_ms = getenv("RX_VK_CAPTURE_WAIT_MAX_MS") ? std::max(0, atoi(getenv("RX_VK_CAPTURE_WAIT_MAX_MS"))) : 20;
+            static const bool adapt = !getenv("RX_VK_CAPTURE_WAIT_ADAPT") || atoi(getenv("RX_VK_CAPTURE_WAIT_ADAPT")) != 0;
+            static std::atomic<int64_t> p90_us{(int64_t)wait_max_ms * 500};
+            if (wait_max_ms > 0) {
+                static std::atomic<int64_t> st_waits{0}, st_cut{0};
+                const int64_t p90 = p90_us.load(std::memory_order_relaxed);
+                static const int64_t k = getenv("RX_VK_CAPTURE_WAIT_K") ? std::clamp(atoi(getenv("RX_VK_CAPTURE_WAIT_K")), 1, 16) : 4;
+                const int cap_ms = adapt ? (int)std::clamp<int64_t>(k * p90 / 1000, wait_max_ms, std::max(wait_max_ms, 250)) : wait_max_ms;
+                const bool must_wait = adapt && vk_timeline_completed() < wait;
+                const bool done = vk_timeline_wait_for(wait, (uint32_t)cap_ms);
+                if (must_wait) {
+                    const int64_t took = done ? std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - tw).count()
+                                              : (int64_t)cap_ms * 1000;
+                    if (!done) p90_us.fetch_add(2000, std::memory_order_relaxed);
+                    else if (took > p90) p90_us.fetch_add(900, std::memory_order_relaxed);
+                    else if (p90_us.fetch_sub(100, std::memory_order_relaxed) < 100) p90_us.store(0, std::memory_order_relaxed);
+                    static std::atomic<bool> told{false};
+                    if (cap_ms >= 2 * wait_max_ms && !told.exchange(true))
+                        logf("vk: captures' waits for late pages: the cap follows a slower GPU, now %d ms (RX_VK_CAPTURE_WAIT_MAX_MS %d)",
+                             cap_ms, wait_max_ms);
+                }
+                st_cut += !done;
+                if (++st_waits % 1200 == 0)
+                    logf("vk: captures' waits for late pages: %lld, %lld of them cut; the cap now %d ms (RX_VK_CAPTURE_WAIT_MAX_MS %d%s)",
+                         (long long)st_waits.load(), (long long)st_cut.load(), cap_ms, wait_max_ms, adapt ? "" : ", fixed");
+            } else {
+                vk_timeline_wait(wait);
+            }
             {   // (Mako: a long one on its own: the game's thread waited for the GPU)
                 const double w = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tw).count();
                 static int told;
