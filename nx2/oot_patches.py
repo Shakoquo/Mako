@@ -1200,6 +1200,22 @@ def report(paths, counts, protect_hearts=False):
               "the pick-up indicator, the water ripples, the time of day, Scarecrow's Song, the floor web)" % (whole_sites, len(WHOLE_SITES)))
 
 
+# (hookshot, 15/11) The game's zstd sequence loop (f_801102e0, ZSTD_decompressSequences_body of its zstd 1.4) natively: most of
+# the loading threads' time arriving in Hyrule Castle (host/zstd_native.c says what was measured). At the head of the lifted
+# function, inside it (split_hot cuts the file at function heads: the call has to travel with the function): the host runs the
+# loop and the function returns, or (HOS_ZSTD_NATIVE=0) the lifted body runs as before
+ZSTD_HEAD = "void f_801102e0(Ctx *__restrict A64_NOESC c) {\n"
+ZSTD_CALL = ("    { extern int hos_zstd_seq(Ctx *, void (*)(Ctx *));   /* (nx2/oot_patches.py: host/zstd_native.c) */\n"
+             "      if (hos_zstd_seq(c, f_801102e0)) return; }\n")
+
+
+def patch_zstd(s):
+    """The native zstd sequence loop's call at the head of f_801102e0 (the supported build's: its address is that build's)"""
+    if ZSTD_HEAD not in s or ZSTD_CALL in s:
+        return None
+    return s.replace(ZSTD_HEAD, ZSTD_HEAD + ZSTD_CALL, 1)
+
+
 def apply(gen, *, protect_hearts=False, required=False):
     """required: the lift of the supported build (LIFE_BUILD_ID), whole: a missing output-size edit stops it (apply_output_size).
     The other patches only warn when their place is not found once. (nx2/chunks.py edit_c makes the same edits, a process per
@@ -1211,6 +1227,7 @@ def apply(gen, *, protect_hearts=False, required=False):
             s = f.read()
         out, c, lines = patch_file(s, os.path.basename(path), protect_hearts)
         counts.append(c)
+        done["zstd sequence loop"] = 0
         if lines:
             print("\n".join(lines))
         if out != s:
@@ -1249,6 +1266,11 @@ OUT_EDITS = [
      "    if (hos_output_size(0) != 2560 || hos_output_size(1) != 1440) { c->x[24] = (uint32_t)c->x[24] * hos_output_size(0) / 2560; c->x[25] = (uint32_t)c->x[25] * hos_output_size(1) / 1440; }\n"),
     ("    c->x[8] = 0x44f00000ULL;\n    c->x[8] &= 0xFFFFFFFFULL;\n    recomp_store32(c,c->x[19] + 3668,c->x[8]);\n"
      "    c->x[8] = 0x44870000ULL;\n    c->x[8] &= 0xFFFFFFFFULL;\n",
+        zstd = patch_zstd(out) if protect_hearts else None
+        if zstd is not None:
+            out = zstd
+            done["zstd sequence loop"] += 1
+            print("oot_patches: native zstd sequence loop in", os.path.basename(path))
      "    c->x[8] = hos_output_size(0) * 3 / 4;\n    { float _f = (float)c->x[8]; uint32_t _u; memcpy(&_u, &_f, 4); c->x[8] = _u; }\n"
      "    recomp_store32(c,c->x[19] + 3668,c->x[8]);\n"
      "    c->x[8] = hos_output_size(1) * 3 / 4;\n    { float _f = (float)c->x[8]; uint32_t _u; memcpy(&_u, &_f, 4); c->x[8] = _u; }\n"),
