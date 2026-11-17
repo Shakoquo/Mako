@@ -24,6 +24,7 @@
 
 #include "vk_api.h"
 #include "vk_draw.h"
+#include "vk_push_fix.h"
 #include "vk_framegen.h"
 #include "vk_internal.h"
 #include "vk_new.h"
@@ -206,6 +207,35 @@ void new_refuse_test(int64_t presents) {   // (the replay's present, its count)
 }
 
 namespace {
+
+// (hookshot, issue 640) The mesh shader fallback's task programs read the task payloads' address from the push constants by the
+// member's byte offset (64) where SPIR-V takes the member's index (3): an access chain past the block's last member. Such a module
+// is invalid, and NVIDIA's compiler faulted on it (vkCreateComputePipelines, "a fault in the driver", 10 ms). A GTX 1060's and a
+// GTX 1070's logs ended there: their first task + mesh draw (a5da9f84b72d1471, Kokiri Forest after a save is loaded) "could not be
+// made", the next fallback compile never returned, and the picture stayed black with the game running behind it. Measured with
+// RX_VK_FORCE_MESH_FALLBACK=1 on an RTX 3060 Ti: the same fault on a5da9f84b72d1471, then the render thread's last line. The
+// translator makes them so, and the program caches players have keep them: here, as each module is made, such an index becomes
+// the index of the member at that offset (vk_push_fix.h). Only on a GPU that runs the fallback. RX_VK_NO_PUSH_FIX=1: the modules
+// as they are
+PFN_vkCreateShaderModule unfixed_create_shader_module = nullptr;
+std::atomic<int> push_fixes_told{0};
+VKAPI_ATTR VkResult VKAPI_CALL fixing_create_shader_module(VkDevice d, const VkShaderModuleCreateInfo* ci,
+                                                           const VkAllocationCallbacks* a, VkShaderModule* m) {
+    std::vector<uint32_t> w;
+    const size_t fixed = ci && ci->pCode && !(ci->codeSize % 4) ? push_offset_fix(ci->pCode, ci->codeSize / 4, w) : 0;
+    if (!fixed) return unfixed_create_shader_module(d, ci, a, m);
+    if (push_fixes_told++ < 4)
+        logf("vk: fallback: %zu push constant access%s by byte offset made by member index (issue 640)", fixed, fixed == 1 ? "" : "es");
+    VkShaderModuleCreateInfo with = *ci;
+    with.pCode = w.data();
+    with.codeSize = w.size() * 4;
+    return unfixed_create_shader_module(d, &with, a, m);
+}
+void fix_fallback_modules() {
+    if (!dev.mesh_fallback || getenv("RX_VK_NO_PUSH_FIX") || !vkx::vkCreateShaderModule) return;
+    unfixed_create_shader_module = vkx::vkCreateShaderModule;   // (the guard's, or the driver's)
+    vkx::vkCreateShaderModule = fixing_create_shader_module;
+}
 
 bool has_extension(const std::vector<VkExtensionProperties>& all, const char* name) {
     for (const auto& e : all)
@@ -600,6 +630,7 @@ bool create_device() {
     if (dev.vertex_divisor) *tail = &vdiv, tail = &vdiv.pNext;
     if (dev.graphics_pipeline_library) *tail = &gpl, tail = &gpl.pNext;
     VkPhysicalDeviceFaultFeaturesEXT fault{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT};
+    fix_fallback_modules();   // (hookshot, issue 640: after the guard, through it)
     if (dev.device_fault) *tail = &fault, tail = &fault.pNext;
     VkPhysicalDeviceImage2DViewOf3DFeaturesEXT v2d3d{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_2D_VIEW_OF_3D_FEATURES_EXT};
     if (dev.view_2d_of_3d) *tail = &v2d3d, tail = &v2d3d.pNext;
