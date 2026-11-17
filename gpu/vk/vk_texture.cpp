@@ -5263,13 +5263,39 @@ void texture_frame(uint64_t completed) {
     // may have put other things there since, and a write-back over scene data once crashed it)
     static const uint64_t keep_finalized_max =
         (uint64_t)(getenv("RX_VK_KEEP_FINALIZED_MB") ? std::max(0, atoi(getenv("RX_VK_KEEP_FINALIZED_MB"))) : 128) << 20;
-    const auto keep_finalized = [&](const Texture* tex) {
+    const auto keep_finalized_old = [&](const Texture* tex) {
         if (!keep_finalized_max || !tex->gpu_written || !tex->released || !tex->first_written ||
             tex->first_written != tex->last_written || tex->bytes > (4ull << 20))
             return false;
         const auto g = gpu_owned.find(tex->gpu);   // (its storage's range still the one the GPU drew it in)
         if (g == gpu_owned.end() || g->second.first != tex->gpu + std::max<uint64_t>(tex->guest_size, 1)) return false;
         return !drawn_over(tex) && !drawn_over_shifted(tex);
+    };
+    // (Mako 4.2, from Project ReLink 7ef0c43, issue 47) The rule above knew a texture to keep by two signs that fail on their
+    // own: drawn in one frame alone, and its storage still listed under its own range (a list of 65536 ranges whose lowest
+    // addresses leave it when full). Either failing, a finalized texture went without its texels written anywhere, and made again
+    // it was empty: striped ground in Dodongo's Cavern after 5 to 15 minutes. Now one the GPU drew is kept as long as nothing took
+    // its storage since (no target drew over it, no other range overlapping it registered after it was finalized, the CPU did not
+    // write it). Same cap, RX_VK_KEEP_FINALIZED_MB. RX_VK_KEEP_DRAWN=0: the rule above alone, as before
+    static const bool keep_drawn = !getenv("RX_VK_KEEP_DRAWN") || atoi(getenv("RX_VK_KEEP_DRAWN")) != 0;
+    const auto storage_taken = [&](const Texture* tex) {
+        const uint64_t lo = tex->gpu, hi = tex->gpu + std::max<uint64_t>(tex->guest_size, 1);
+        auto it = gpu_owned.upper_bound(lo);
+        if (it != gpu_owned.begin()) --it;
+        for (; it != gpu_owned.end() && it->first < hi; ++it)
+            if (it->second.first > lo && !(it->first == lo && it->second.first == hi) && it->second.second > tex->release_gen)
+                return true;
+        return false;
+    };
+    const auto rewritten = [&](Texture* tex) {
+        if (!tex->released || !tex->guest || tex->gpu >= (1ull << 40)) return false;   // (a virtual pool's: its page walk is the
+        static thread_local Ranges r;                                                    // sampling's to do)
+        return texture_dirty(*tex, std::max(tex->upload_gen, tex->release_gen), r);
+    };
+    const auto keep_finalized = [&](Texture* tex) {
+        if (!keep_drawn) return keep_finalized_old(tex);
+        if (!keep_finalized_max || !tex->gpu_written || !tex->released || tex->bytes > (4ull << 20)) return false;
+        return !drawn_over(tex) && !drawn_over_shifted(tex) && !storage_taken(tex) && !rewritten(tex);
     };
     uint64_t finalized_kept = 0;
     size_t finalized_kept_n = 0;
