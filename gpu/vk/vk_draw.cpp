@@ -37,6 +37,7 @@
 #endif
 #include <windows.h>
 #include <psapi.h>
+#endif
 #if defined(__linux__) && defined(__GLIBC__)
 #include <malloc.h>
 #endif

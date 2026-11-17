@@ -641,7 +641,6 @@ bool create_device() {
             presenter_family = UINT32_MAX;
     }
     static const float priorities[2] = {1.0f, 1.0f};
-        amd_gcn = dev.props.vendorID == 0x1002 && sc.minSubgroupSize == 64 && sc.maxSubgroupSize == 64;   // (issue 43)
     std::vector<VkDeviceQueueCreateInfo> qs;
     auto queues = [&](uint32_t family, uint32_t count) {
         for (auto& x : qs)
@@ -655,9 +654,6 @@ bool create_device() {
     if (presenter_family != UINT32_MAX) queues(presenter_family, presenter_index + 1);
     (void)q;
     // (and the presenter's waits for its presents to be shown: VK_KHR_present_id + VK_KHR_present_wait, where the driver has them)
-    if (amd_gcn && !dev.mesh_shader)   // (hookshot, issue 43)
-        logf("vk: an AMD GCN GPU (Radeon RX 400 / 500 series or Vega: 64-lane subgroups only, no mesh shaders): below what ReLink "
-             "supports (an RX 570's driver closed the game during its shader preparation, issue 43)");
     const bool want_present_wait = presenter_family != UINT32_MAX && has_extension(exts, VK_KHR_PRESENT_ID_EXTENSION_NAME) &&
                                    has_extension(exts, VK_KHR_PRESENT_WAIT_EXTENSION_NAME);
     if (want_present_wait)
@@ -825,6 +821,10 @@ bool create_device() {
         // (RADV on GCN 1-4, GFX6-8: no 16-bit shader inputs and outputs there, which RADV has from GFX9 (packed 16-bit math) on.
         // Its compiler cannot build the biggest mesh fallback programs: fallback_size_policy.h)
         dev.radv_gcn = drv.driverID == VK_DRIVER_ID_MESA_RADV && !f11.storageInputOutput16;
+        amd_gcn = dev.props.vendorID == 0x1002 && sc.minSubgroupSize == 64 && sc.maxSubgroupSize == 64;   // (ReLink issue 43)
+        if (amd_gcn)
+            logf("vk: an AMD GCN GPU (Radeon RX 400 / 500 series or Vega: 64-lane subgroups only, no mesh shaders): its driver may "
+                 "close the game during the shader preparation (ReLink issue 43)");
         logf("vk: subgroups: default %u lanes, %u-%u, pinned to 32 on stages %#x; RADV on GCN 1-4: %s", sg.subgroupSize, sc.minSubgroupSize,
              sc.maxSubgroupSize, (unsigned)dev.sg32_stages, dev.radv_gcn ? "yes" : "no");
     }

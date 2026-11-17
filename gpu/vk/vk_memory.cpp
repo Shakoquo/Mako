@@ -3621,13 +3621,13 @@ Pool* pool_lookup(uint64_t guest, uint64_t size) {
         }
         std::lock_guard lk(bg_mu);
         bool busy = false;
-        for (const uint64_t x : bg_inflight)
-            if (x >= mlo && x < mhi) busy = true;
+        for (const auto& [x, end] : bg_inflight)
+            if (x < mhi && end > mlo) busy = true;
         bool defer = busy;
         if (!busy && !deferred_once.count(mlo) && mhi - mlo <= (256ull << 20)) {
             deferred_once.insert(mlo);
             bg_start();
-            bg_inflight.push_back(mlo);
+            bg_inflight.emplace(mlo, mhi);
             bg_queue.push_back({mlo, mhi});
             bg_cv.notify_one();
             st_defer_sent++;
