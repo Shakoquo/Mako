@@ -1216,7 +1216,7 @@ void fg_inputs(VkCommandBuffer cmd, bool known, Texture* in, VkImageView in_view
 }
 }  // namespace
 
-bool temporal_fg_inputs() { return temporal_mode() == ur::GAME && fsr3fi::frames_wanted() != 0; }
+bool temporal_fg_inputs() { return temporal_mode() == ur::GAME && fsr3fi::motion_wanted() != 0; }
 
 bool temporal_upscale(VkCommandBuffer cmd, uint64_t key, bool known, Texture* in, VkImageView in_view, Texture* out,
                       VkImageView out_view, uint32_t out_level) {
@@ -1463,7 +1463,7 @@ bool temporal_upscale(VkCommandBuffer cmd, uint64_t key, bool known, Texture* in
     dlss_fg_inputs(cmd, f, cam.projection, cam.current, cam.jitter, motion);
     // (hookshot) and AMD FSR 3.1's frame interpolation: this motion, the skinned draws' own in it, over the camera's alone that
     // its own inputs made at this dispatch (vk_fsr3_inputs.h take_motion). Nothing unless it is asked for
-    if (motion && fsr3fi::frames_wanted()) (void)fsr3_inputs::take_motion(cmd, f.motion.image, rw, rh);
+    if (motion && fsr3fi::motion_wanted()) (void)fsr3_inputs::take_motion(cmd, f.motion.image, rw, rh);
     s.last_frame = now;
     s.drawn_mode = draw_mode;
     s.last_jitter[0] = cam.jitter[0], s.last_jitter[1] = cam.jitter[1];

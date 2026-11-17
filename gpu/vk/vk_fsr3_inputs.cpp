@@ -223,13 +223,13 @@ VkImageView depth_view(Texture* t) {
 
 } // namespace
 
-bool wanted() { return fsr3_wanted() || fsr3fi::frames_wanted() != 0; }
+bool wanted() { return fsr3_wanted() || fsr3fi::motion_wanted() != 0; }
 
 bool scene_format(VkFormat format) {
     if (format == VK_FORMAT_B10G11R11_UFLOAT_PACK32) return true;
     static const bool enabled = upscaler_rows::psychov35_compatibility(env_switch("RX_VK_PSYCHOV35_DLSS"));
     // (frame interpolation at any multiplier and at Auto: frames_wanted says whether Frame generation is on and asks for it)
-    return enabled && format == VK_FORMAT_R16G16B16A16_SFLOAT && scene_tonemap_on() && fsr3fi::frames_wanted() != 0;
+    return enabled && format == VK_FORMAT_R16G16B16A16_SFLOAT && scene_tonemap_on() && fsr3fi::motion_wanted() != 0;
 }
 
 bool colour_pair(VkFormat input, VkFormat output) {

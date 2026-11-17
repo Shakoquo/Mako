@@ -701,6 +701,12 @@ bool capable() {
     return yes;
 }
 
+bool builtin_motion() {
+    static const bool on = !getenv("RX_VK_FG_MOTION") || atoi(getenv("RX_VK_FG_MOTION")) != 0;
+    return on && opts.framegen >= 1 && dev.device && dev.push_descriptor && !frames_wanted();
+}
+uint32_t motion_wanted() { return frames_wanted() || builtin_motion() ? 1u : 0u; }
+
 uint32_t frames_wanted() {
     // (the row first: a device is not asked anything, and nothing is logged, while frame generation is not at 2x)
     return asked() && capable() ? 1u : 0u;

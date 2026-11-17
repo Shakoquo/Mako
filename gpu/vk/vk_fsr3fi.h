@@ -79,6 +79,11 @@ struct Inputs {
 /// never, =1 over the row), on a device that is capable(). Read every frame: the rows change while the game runs. vk_framegen.cpp asks
 /// NVIDIA DLSS Frame Generation first; this makes what it does not.
 [[nodiscard]] uint32_t frames_wanted();
+/// (Mako 4.2) The renderer's own frame generation makes its frames from the game's motion (vk_framegen.cpp, shaders/fg_synth_mv.comp)
+/// rather than a search on the picture: frame generation on, FSR 3.1's not asked for. RX_VK_FG_MOTION=0: the search, as before
+[[nodiscard]] bool builtin_motion();
+/// The scene's depth and motion are wanted at all: for FSR 3.1's frames, or for the renderer's own (builtin_motion)
+[[nodiscard]] uint32_t motion_wanted();
 
 /// Records `count` made frames between the frame before and this one, made frame i at times[i] (0: the frame before, 1: this
 /// one; kept within 0.01 to 0.99) into made_image(i), making the pipelines and the images for these sizes first (again when

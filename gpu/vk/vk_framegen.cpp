@@ -40,6 +40,7 @@
 #include "shaders/fg_scale_comp_spv.h"
 #include "shaders/fg_scale_pq_comp_spv.h"   // (fg_scale.comp with FG_SCALE_PQ: an RGB10A2 destination)
 #include "shaders/fg_synth_comp_spv.h"
+#include "shaders/fg_synth_mv_comp_spv.h"   // (Mako 4.2: from the game's motion)
 #include "shaders/hdr_encode_comp_spv.h"
 #include "shaders/crt_downsample_comp_spv.h"
 #include "shaders/crt_lottes_comp_spv.h"
@@ -94,7 +95,7 @@ struct State {
     bool init = false;
     std::atomic<bool> failed{false};   // also read by Reflex's game-thread eligibility check
     uint32_t w = 0, h = 0;
-    Pipe copy, luma, flow, median, synth;
+    Pipe copy, luma, flow, median, synth, synth_mv;   // (synth_mv: from the game's motion, made when it can be)
     VkSampler nearest = VK_NULL_HANDLE, linear = VK_NULL_HANDLE;
     Img frames[2], lumas[2], flows[2];
     OutSet sets[3];   // (one shown, one waiting its place on the line, one being made: the pacer never holds the game back)
@@ -228,7 +229,7 @@ bool make_pipe(Pipe& p, const uint32_t* code, size_t bytes, std::initializer_lis
 
 // The optional interpolation is disabled after setup fails: retain none of its unused setup objects.
 void drop_setup() {
-    for (Pipe* p : {&fg.copy, &fg.luma, &fg.flow, &fg.median, &fg.synth}) drop_pipe(*p);
+    for (Pipe* p : {&fg.copy, &fg.luma, &fg.flow, &fg.median, &fg.synth, &fg.synth_mv}) drop_pipe(*p);
     if (fg.nearest) vkDestroySampler(dev.device, fg.nearest, nullptr);
     if (fg.linear) vkDestroySampler(dev.device, fg.linear, nullptr);
     fg.nearest = fg.linear = VK_NULL_HANDLE;
@@ -250,6 +251,8 @@ bool init() {
         !make_pipe(fg.median, BUILTIN_SPV_ARGS(FG_MEDIAN_COMP_SPV), {S, I}, 0) ||
         !make_pipe(fg.synth, BUILTIN_SPV_ARGS(FG_SYNTH_COMP_SPV), {S, S, S, I}, 4))
         return undo();
+    if (!make_pipe(fg.synth_mv, BUILTIN_SPV_ARGS(FG_SYNTH_MV_COMP_SPV), {S, S, S, I}, 4))   // (optional: the search stays)
+        logf("vk: frame generation: the pass from the game's motion was not made: the picture search makes the frames");
     VkSamplerCreateInfo si{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     si.addressModeU = si.addressModeV = si.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     si.maxLod = 0.25f;
@@ -576,7 +579,11 @@ void display_main() {
         // game's own frames reached the screen ~3 ms after the made ones, 5.7 and 11 ms apart instead of 8.3 (PresentMon, RTX
         // 5080, 60 fps), and a VRR display's refresh changed every frame (flicker on OLED). Now a set's copies go to the GPU
         // together, the first one's end is waited for, and only the presents keep their times on the line.
-        static const bool ahead_env = !getenv("RX_VK_PRESENT_AHEAD") || atoi(getenv("RX_VK_PRESENT_AHEAD")) != 0;
+        // (Mako 4.2: NVIDIA only by default. On AMD (RX 9060 XT, 144 Hz, 2x) the wait for the first copy's end put each made
+        // frame ~2 ms before the game's own and then left a 12 ms gap: 0 of 720 frames on time, seen as a motion blur from the
+        // title screen on. Off, all on time ~7 ms apart. RX_VK_PRESENT_AHEAD=1/0 forces it)
+        static const bool ahead_env = getenv("RX_VK_PRESENT_AHEAD") ? atoi(getenv("RX_VK_PRESENT_AHEAD")) != 0
+                                                                    : dev.props.vendorID == 0x10DE;
         const bool ahead = present_ahead_wanted(ahead_env, pace, shown, dev.swap_spare.load(std::memory_order_relaxed));
         PendingPresent pending[kMaxMult];
         if (ahead) {
@@ -939,6 +946,23 @@ int fsr3fi_frames(VkCommandBuffer cmd, OutSet& set, int cur, uint32_t uw, uint32
     return count;
 }
 
+// (Mako 4.2) The game's motion for this present's made frames (fsr3fi::builtin_motion): this frame's scene motion, made at the
+// gameplay upscale (vk_fsr3_inputs.h), when the scene fills the frames' picture (the same shape). Null: the picture search
+VkImageView builtin_motion_view(uint32_t uw, uint32_t uh) {
+    if (!fg.synth_mv.pipe || !fsr3fi::builtin_motion()) return VK_NULL_HANDLE;
+    fsr3_inputs::Frame f;
+    static uint64_t asked = 0, with = 0;
+    const bool have = fsr3_inputs::take(f) && f.motion && !f.reset && f.width && f.height &&
+                      std::abs((double)f.width * uh - (double)f.height * uw) <= 0.01 * (double)f.width * uh;
+    with += have;
+    if (++asked % 3000 == 0) {
+        logf("vk: frame generation: %llu of the last 3000 sets made from the game's motion, the rest by the picture search",
+             (unsigned long long)with);
+        with = 0;
+    }
+    return have ? f.motion : VK_NULL_HANDLE;
+}
+
 bool framegen_record(VkCommandBuffer cmd, VkImageView src, uint32_t sw, uint32_t sh, const int crop[4], bool native_pq) {
     const PresentSourceRect source = present_source_rect(sw, sh, crop);
     const int x0 = (int)source.x, y0 = (int)source.y, w = (int)source.w, h = (int)source.h;
@@ -999,7 +1023,8 @@ bool framegen_record(VkCommandBuffer cmd, VkImageView src, uint32_t sw, uint32_t
         const bool fsr = fsr3fi::frames_wanted() &&
                          fsr3fi_frames(cmd, *set, cur, uw, uh, sequence, native_pq, made_t, made_slot, fsr_n) == fsr_n &&
                          fsr_n > 0;
-        bool flow = false;
+        bool flow = false, mv_looked = false;
+        VkImageView mv = VK_NULL_HANDLE;
         for (int k = 0; k < n; k++) {
             set->game[k] = t[k] > 0.999f;
             set->due[k] = at[k] + fg.game_ns;
@@ -1011,6 +1036,14 @@ bool framegen_record(VkCommandBuffer cmd, VkImageView src, uint32_t sw, uint32_t
                 continue;
             }
             if (fsr) continue;   // (made above, into this slot)
+            if (!mv_looked) mv_looked = true, mv = builtin_motion_view(uw, uh);
+            if (mv) {
+                pass(cmd, fg.synth_mv, {{fg.frames[prev].view, fg.linear}, {fg.frames[cur].view, fg.linear}, {mv, fg.linear},
+                                        {set->frame[k].view, VK_NULL_HANDLE}},
+                     uw, uh, &t[k], 4);
+                flow = true;   // (made by the renderer's own)
+                continue;
+            }
             if (!flow) {
                 flow = true;
                 pass(cmd, fg.flow, {{fg.lumas[prev].view, fg.nearest}, {fg.lumas[cur].view, fg.nearest},
@@ -1060,6 +1093,17 @@ bool framegen_record(VkCommandBuffer cmd, VkImageView src, uint32_t sw, uint32_t
         const int fsr_n = blend ? m - 1 : 0;
         if (fsr3fi_frames(cmd, *set, cur, uw, uh, sequence, native_pq, made_t, made_slot, fsr_n) == fsr_n && fsr_n > 0)
             set->made = fsr_n, maker = FgMaker::Fsr3;
+    }
+    const VkImageView mv = !held && set->made == 0 && blend && m > 1 ? builtin_motion_view(uw, uh) : VK_NULL_HANDLE;
+    if (mv) {   // (Mako 4.2: from the game's motion)
+        for (int k = 1; k < m; k++) {
+            const float t = (float)k / (float)m;
+            pass(cmd, fg.synth_mv, {{fg.frames[prev].view, fg.linear}, {fg.frames[cur].view, fg.linear}, {mv, fg.linear},
+                                    {set->frame[k - 1].view, VK_NULL_HANDLE}},
+                 uw, uh, &t, 4);
+        }
+        set->made = m - 1;
+        maker = FgMaker::BuiltIn;
     }
     if (!held && set->made == 0 && blend && m > 1) {
         pass(cmd, fg.flow, {{fg.lumas[prev].view, fg.nearest}, {fg.lumas[cur].view, fg.nearest},
