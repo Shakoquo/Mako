@@ -1884,6 +1884,30 @@ def check_romfs_folder(romfs):
         packed = (" It holds a romfs.bin, a packed copy of the game's files: extract it first."
                   if os.path.isfile(os.path.join(folder, "romfs.bin")) else "")
         fail("The romfs folder %s does not hold the game's files (no %s): choose the extracted RomFS.%s" % (romfs, missing, packed))
+    why = romfs_problem(romfs)
+    if why:
+        fail(why)
+
+
+ROMFS_TABLE = "ResourceSizeTable.Product.111.Nin_Ounce_NVN2.rsizetable.zs"   # (the supported version's, in System/Resource)
+
+
+def romfs_problem(romfs, source=None):
+    """(Mako 4.2, from Project ReLink 794f81e and 398d076, its issues 26 and 88) Why a romfs is not the supported version's
+    RomFS, or None. Another version's files (a dump with the update's code and the first version's files) were built in full
+    and the game then closed or misbehaved; another port's folder built for 40 minutes and died in its first second.
+    source: the package the romfs was read from, named in the message instead of a builder's folder"""
+    res = os.path.join(long_path(romfs), "System", "Resource")
+    if os.path.isfile(os.path.join(res, ROMFS_TABLE)):
+        return None
+    others = sorted(f for f in os.listdir(res) if f.startswith("ResourceSizeTable")) if os.path.isdir(res) else []
+    where = source or ("The romfs folder %s" % romfs)
+    if others:
+        return ("%s holds the game files of another version of the game (%s; Mako needs the version whose files have "
+                "System\\Resource\\%s). The game's code and files must be from the same version: dump the game again with its "
+                "update applied to the whole game, files included, and choose that dump." % (where, others[0], ROMFS_TABLE))
+    return ("%s is not the game's own RomFS: it has no System\\Resource\\%s. Folders taken from another PC port or tool hold "
+            "the game in their own format and do not work here. Use your own dump of the game." % (where, ROMFS_TABLE))
 
 
 def check_unpacked_romfs(romfs, source):
@@ -1893,6 +1917,9 @@ def check_unpacked_romfs(romfs, source):
     if missing:
         fail("%s does not hold all of the game's files (no %s): a game built from it could not start. Dump the game again and "
              "choose the complete dump in Hookshot Builder." % (source, missing))
+    why = romfs_problem(romfs, source)
+    if why:
+        fail(why)
 
 
 def refuse_dump_links(folder):
