@@ -2090,8 +2090,12 @@ bool intel_compiler_row() {
 }
 bool laptop_row() { return dev.props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU; }   // (Set up for a weak laptop)
 bool is_laptop_row(const Row& r) { return !r.value && r.tab == TAB_DEBUG && !strcmp(r.name, "Set up for a weak laptop"); }
+bool is_share_row(const Row& r);
 bool row_shown(int i) {
     const int* v = rows[i].value;
+    // (Mako 4.2: Longshot's Bug report and Save my pipeline list are not shown: Mako's reports go through the launcher's
+    // Send logs)
+    if (i == kBugReportRow || is_share_row(rows[i])) return false;
     return ((rows[i].cheat < 0 && v != &opts.damage_taken) || cheats_on()) && (v != &opts.reflex || reflex_available()) &&
            (v != &opts.antilag || antilag_available()) && (v != &opts.intel_compiles || intel_compiler_row()) &&
            (v != &opts.intel_quick || intel_compiler_row()) &&
@@ -3632,7 +3636,7 @@ int debug_rows(int* out, int* dev, int* dev_head) {
     for (int k = 0; k < count; ++k) {
         const Row& r = rows[tab_row_to_global(TAB_DEBUG, k)];
         if (r.heading) *dev_head = k;
-        else if (*dev_head >= 0 && r.cheat < 0 && r.value != &opts.debug_tools) out[n++] = k;
+        else if (*dev_head >= 0 && r.cheat < 0 && r.value != &opts.debug_tools && !is_share_row(r)) out[n++] = k;   // (Mako: no pipeline share)
     }
     return n;
 }
