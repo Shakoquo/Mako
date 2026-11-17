@@ -510,7 +510,7 @@ static void put_switches(Buf *b) {
         char *kv = utf8_of(e);
 #else
     for (char **e = environ; e && *e && n < 512; e++) {
-        char *kv = strdup(*e);
+        char *kv = _strdup(*e);
 #endif
         char *eq = kv ? strchr(kv, '=') : NULL;
         int take = 0;
@@ -1229,7 +1229,7 @@ static void lines_add(Lines *l, const char *line) {
         if (!more) return;
         l->at = more, l->cap = l->cap ? l->cap * 2 : 256;
     }
-    l->at[l->n] = strdup(line);
+    l->at[l->n] = _strdup(line);
     if (l->at[l->n]) l->n++;
 }
 static void lines_free(Lines *l) {
@@ -1252,7 +1252,7 @@ static int crash_lines(const Shown *s, Lines *tail, Lines *crash) {
             else {
                 free(ring.at[0]);
                 memmove(ring.at, ring.at + 1, sizeof *ring.at * (HOS_CRASH_TAIL_LINES - 1));
-                ring.at[HOS_CRASH_TAIL_LINES - 1] = strdup(line);
+                ring.at[HOS_CRASH_TAIL_LINES - 1] = _strdup(line);
                 if (!ring.at[HOS_CRASH_TAIL_LINES - 1]) ring.n--;
             }
         } else if (crash->n < HOS_CRASH_CRASH_LINES && hos_crash_report_line(one, sizeof one, line)) {

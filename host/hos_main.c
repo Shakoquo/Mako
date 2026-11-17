@@ -406,7 +406,7 @@ static const char *saves_dir(const char *beside) {
                 continue;
             }
             void *more = realloc(went, (n_went + 1) * sizeof *went);
-            char *name = more ? strdup(fd.cFileName) : NULL;
+            char *name = more ? _strdup(fd.cFileName) : NULL;
             if (more) went = more;
             if (!name) kept++;
             else if (!has_link(from) && MoveFileExA(from, to, 0)) went[n_went].name = name, went[n_went++].copied = 0;
