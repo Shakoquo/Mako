@@ -14,6 +14,7 @@
 #include <vector>
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <thread>
 
@@ -345,24 +346,21 @@ bool create_image(const VkImageCreateInfo& ci, VkImage& image, VmaAllocation& al
 namespace {
 std::mutex reap_mu;
 std::condition_variable reap_cv;
-std::vector<std::pair<VkImage, VmaAllocation>> reap_queue;
+std::vector<std::function<void()>> reap_queue;   // (in order: a texture's views before its image)
 bool reap_on() {
     static const bool on = [] {
         const char* e = getenv("RX_VK_REAP");
         if (e && *e && atoi(e) == 0) return false;
         std::thread([] {
             SetThreadDescription(GetCurrentThread(), L"mkw_vk image reaper");
-            std::vector<std::pair<VkImage, VmaAllocation>> batch;
+            std::vector<std::function<void()>> batch;
             for (;;) {
                 {
                     std::unique_lock lk(reap_mu);
                     reap_cv.wait(lk, [] { return !reap_queue.empty(); });
                     batch.swap(reap_queue);
                 }
-                for (auto& [img, a] : batch) {
-                    std::lock_guard lk(compact_mu);
-                    vmaDestroyImage(vma, img, a);
-                }
+                for (auto& fn : batch) fn();
                 batch.clear();
             }
         }).detach();
@@ -372,18 +370,23 @@ bool reap_on() {
     return on;
 }
 }
+// (Mako 4.2, from Project ReLink 5224e82) fn on the reaper, in the order given, or here with RX_VK_REAP=0: the rest of a texture's
+// end too (its views, a buffer, memory), which the render thread still did as it presented (~1 ms of each frame over 25 ms while
+// the camera turned in the Market)
+void reap(std::function<void()> fn) {
+    if (!reap_on()) return fn();
+    {
+        std::lock_guard lk(reap_mu);
+        reap_queue.push_back(std::move(fn));
+    }
+    reap_cv.notify_one();
+}
 void destroy_image(VkImage image, VmaAllocation allocation) {
     if (!image && !allocation) return;
-    if (reap_on()) {
-        {
-            std::lock_guard lk(reap_mu);
-            reap_queue.push_back({image, allocation});
-        }
-        reap_cv.notify_one();
-        return;
-    }
-    std::lock_guard lk(compact_mu);
-    vmaDestroyImage(vma, image, allocation);
+    reap([image, allocation] {
+        std::lock_guard lk(compact_mu);
+        vmaDestroyImage(vma, image, allocation);
+    });
 }
 uint64_t allocation_size(VmaAllocation allocation) {
     VmaAllocationInfo info{};
