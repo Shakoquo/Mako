@@ -1216,6 +1216,43 @@ def patch_zstd(s):
     return s.replace(ZSTD_HEAD, ZSTD_HEAD + ZSTD_CALL, 1)
 
 
+# (hookshot, 15/11) The two name searches of f_805aeea0 (the lookup in the game's sorted containers) natively: host/names_native.c
+# says what was measured. At each loop's head the host runs the iterations it can and the loop goes on or out; at each exit,
+# the check of HOS_NAMES_NATIVE=2. Inside the function only (split_hot cuts the file at function heads, and a label of the
+# same address could be another function's)
+NAMES_HEAD = "void f_805aeea0(Ctx *__restrict A64_NOESC c) {\n"
+NAMES_EDITS = [
+    ("L_805afbd4:;\n", "    { extern int hos_names_lower(Ctx *); if (hos_names_lower(c)) goto L_805afe30; }   /* (nx2/oot_patches.py: "
+                       "host/names_native.c) */\n"),
+    ("L_805afe30:;\n", "    { extern volatile int hos_names_checking; extern void hos_names_exit(Ctx *, int); "
+                       "if (hos_names_checking) hos_names_exit(c, 0); }\n"),
+    ("L_805b1d8c:;\n", "    { extern int hos_names_upper(Ctx *, int); if (hos_names_upper(c, 1)) goto L_805b0200; }\n"),
+    ("L_805b1d98:;\n", "    { extern int hos_names_upper(Ctx *, int); if (hos_names_upper(c, 0)) goto L_805b0200; }\n"),
+    ("L_805b0200:;\n", "    { extern volatile int hos_names_checking; extern void hos_names_exit(Ctx *, int); "
+                       "if (hos_names_checking) hos_names_exit(c, 1); }\n"),
+]
+
+
+def patch_names(s):
+    """The native name searches' calls in f_805aeea0 (the supported build's: these addresses are that build's). None when the
+    function is not in this file or is patched already; a SystemExit when one of its places is not there once"""
+    at = s.find(NAMES_HEAD)
+    if at < 0:
+        return None
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # (python -I leaves the script folder off)
+    import lifted_c
+    m = lifted_c.HEAD.search(s, at + len(NAMES_HEAD))
+    end = m.start() if m else len(s)
+    body = s[at:end]
+    if NAMES_EDITS[0][1] in body:
+        return None
+    for anchor, call in NAMES_EDITS:
+        if body.count(anchor) != 1:
+            raise SystemExit("oot_patches: f_805aeea0's %r found %d times" % (anchor.strip(), body.count(anchor)))
+        body = body.replace(anchor, anchor + call, 1)
+    return s[:at] + body + s[end:]
+
+
 def apply(gen, *, protect_hearts=False, required=False):
     """required: the lift of the supported build (LIFE_BUILD_ID), whole: a missing output-size edit stops it (apply_output_size).
     The other patches only warn when their place is not found once. (nx2/chunks.py edit_c makes the same edits, a process per
@@ -1228,6 +1265,7 @@ def apply(gen, *, protect_hearts=False, required=False):
         out, c, lines = patch_file(s, os.path.basename(path), protect_hearts)
         counts.append(c)
         done["zstd sequence loop"] = 0
+        done["name searches"] = 0
         if lines:
             print("\n".join(lines))
         if out != s:
@@ -1271,6 +1309,11 @@ OUT_EDITS = [
             out = zstd
             done["zstd sequence loop"] += 1
             print("oot_patches: native zstd sequence loop in", os.path.basename(path))
+        names = patch_names(out) if protect_hearts else None
+        if names is not None:
+            out = names
+            done["name searches"] += 1
+            print("oot_patches: native name searches in", os.path.basename(path))
      "    c->x[8] = hos_output_size(0) * 3 / 4;\n    { float _f = (float)c->x[8]; uint32_t _u; memcpy(&_u, &_f, 4); c->x[8] = _u; }\n"
      "    recomp_store32(c,c->x[19] + 3668,c->x[8]);\n"
      "    c->x[8] = hos_output_size(1) * 3 / 4;\n    { float _f = (float)c->x[8]; uint32_t _u; memcpy(&_u, &_f, 4); c->x[8] = _u; }\n"),
