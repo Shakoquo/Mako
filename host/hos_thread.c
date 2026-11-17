@@ -41,10 +41,21 @@ struct HosThread {
     HANDLE wake;
     /* virtual cores (HOS_VCORES): the core held + 1 (0: none), the last one, a better waiter's request, queued, and
        whether it has run without one since an escape (vc_acquire; until its next block, hos_vcore_away, or the next
-       hos_vcore_back) */
-    int vc_held, vc_last, vc_queued, vc_escaped;
+       hos_vcore_back); vc_starved: waiting longer than HOS_VCORE_STARVE_US (it goes first at the next release) */
+    int vc_held, vc_last, vc_queued, vc_escaped, vc_starved;
     volatile int vc_kick;
     int64_t vc_since;
+    /* (hookshot) a long wait's cause (HOS_VCORE_LOG_MS, vc_long_wait): when it took the core it holds and when a waiter asked
+       for it; and, as a grant ends its wait, the thread that let the core go, its priority, how long it had held it and how
+       long before it let go it was asked (-1: never) */
+    int64_t vc_held_at, vc_kick_at;
+    char vc_by[48];
+    int vc_by_prio;
+    int64_t vc_by_held, vc_by_asked;
+    /* (hookshot) the frame trace (RX_VK_FRAME_TRACE, MkwVkHost thread_times): time waiting for a core and time blocked (from
+       hos_vcore_away to hos_vcore_back, the core's wait taken out), in ns, counted while hos_fps_timing is on */
+    volatile int64_t vc_wait_total, blocked_total;
+    int64_t away_at;
     CONDITION_VARIABLE vc_cv;
     /* (hookshot) fibers: the context running now (NULL: ctx, the thread's own), the thread's host fiber once it
        switched to a guest fiber */
@@ -600,6 +611,26 @@ void hos_thread_join(HosThread *t) {
         WaitForSingleObject(t->handle, INFINITE);
     }
     if (away) hos_vcore_back();
+}
+
+/* (hookshot) The frame trace's main-thread columns (RX_VK_FRAME_TRACE, through MkwVkHost thread_times): the thread named name's
+   time so far, in ns: [0] waiting for a virtual core, [1] blocked (in a wait, a sleep or a join, the core given up), both counted
+   only while hos_fps_timing is on, and [2] its CPU time (the system's, GetThreadTimes). 0 when no thread has that name */
+int hos_thread_times_of(const char *name, int64_t out[3]) {
+    int found = 0;
+    out[0] = out[1] = out[2] = 0;
+    AcquireSRWLockShared(&threads_lock);
+    for (int i = 0; i < nthreads && !found; i++) {
+        HosThread *t = threads[i];
+        if (strcmp(t->name, name)) continue;
+        found = 1;
+        out[0] = t->vc_wait_total, out[1] = t->blocked_total;
+        FILETIME c, e, k, u;
+        if (t->handle && GetThreadTimes(t->handle, &c, &e, &k, &u))
+            out[2] = (int64_t)(((uint64_t)k.dwHighDateTime << 32 | k.dwLowDateTime) + ((uint64_t)u.dwHighDateTime << 32 | u.dwLowDateTime)) * 100;
+    }
+    ReleaseSRWLockShared(&threads_lock);
+    return found;
 }
 
 void hos_thread_destroy(HosThread *t) {
@@ -1632,14 +1663,19 @@ void hos_thread_log_handles(void) {
    otherwise (both 2000000: 2 s). An escape runs a thread with no core while the holder still runs on it, so two threads
    share per-core state (#1929); it is kept only as a deadlock breaker. 250 ms was the default before: on the 25-minute
    route it escaped 6-8 times a run, at waits that ended by themselves within 1.2 s (0 escapes at 2 s, frame times the
-   same or better). Every 5 s the log has a "vcores:" line. GetCurrentCoreNumber answers the
+   same or better). A thread that waits only because better threads keep winning its core (they take it in turns at every
+   block, or one of them runs on) is starved, not deadlocked, and an escape runs it beside the holder for nothing: once
+   it has waited HOS_VCORE_STARVE_US (1000000: 1 s; 0: never) it goes before every other waiter at the next release of a
+   core it may use, and asks the worst holder of those cores to give the core up, whatever its priority. It runs a turn,
+   the holders ask for the core back as for any worse thread, and a wait that long ends in a grant, not an escape (#262;
+   the 5 s line counts these grants). Every 5 s the log has a "vcores:" line. GetCurrentCoreNumber answers the
    core a thread holds. */
 #if !defined(__EMSCRIPTEN__)
 static SRWLOCK vc_lock = SRWLOCK_INIT;
 static HosThread *vc_owner[8];
 static HosThread *vc_queue[1024];
 static int vc_nq;
-static struct { int64_t takes, waits, wait_ns, max_ns, escapes, kicks, yields, since; } vc_st;
+static struct { int64_t takes, waits, wait_ns, max_ns, escapes, kicks, yields, boosts, long_waits, since; } vc_st;
 
 int hos_vcores_on(void) {
     static int on = -1;
@@ -1656,9 +1692,11 @@ static unsigned vc_allowed(HosThread *t) {
     if (!m) m = 1u << hos_thread_core(t);
     return m;
 }
-/* a runs before b */
+/* a runs before b: a starved waiter first (the one waiting longest first among them), then by priority */
 static int vc_better(HosThread *a, HosThread *b) {
-    return a->priority != b->priority ? a->priority < b->priority : a->vc_since < b->vc_since;
+    if (a->vc_starved != b->vc_starved) return a->vc_starved;
+    if (!a->vc_starved && a->priority != b->priority) return a->priority < b->priority;
+    return a->vc_since < b->vc_since;
 }
 /* a free core t may run on (its last one, its ideal one, then the lowest), or -1; holding vc_lock */
 static int vc_free_for(HosThread *t) {
@@ -1675,6 +1713,8 @@ static void vc_take(HosThread *t, int c) {
     t->vc_held = c + 1;
     t->vc_last = c + 1;
     t->vc_kick = 0;
+    t->vc_starved = 0;
+    t->vc_held_at = hos_now_ns(), t->vc_kick_at = 0;
 }
 static void vc_dequeue(HosThread *t) {
     for (int i = 0; i < vc_nq; i++)
@@ -1687,12 +1727,20 @@ static void vc_dequeue(HosThread *t) {
 /* (HOS_CHAIN: a thread's wait for a core, and the grant that ends it; bit 63: never a guest address) */
 static uint64_t vc_chain_key(HosThread *t) { return 1ULL << 63 | (uint64_t)(uintptr_t)t; }
 /* core c is free: to the best waiter allowed on it; holding vc_lock */
-static void vc_grant(int c) {
+static void vc_grant(int c, HosThread *by) {
     HosThread *best = NULL;
     for (int i = 0; i < vc_nq; i++)
         if ((vc_allowed(vc_queue[i]) >> c & 1) && (!best || vc_better(vc_queue[i], best))) best = vc_queue[i];
     if (!best) return;
+    vc_st.boosts += best->vc_starved;
     vc_dequeue(best);
+    if (by) {   /* (the long-wait line's cause: vc_long_wait) */
+        const int64_t now = hos_now_ns();
+        memcpy(best->vc_by, by->name, sizeof best->vc_by);
+        best->vc_by_prio = by->priority;
+        best->vc_by_held = by->vc_held_at ? now - by->vc_held_at : -1;
+        best->vc_by_asked = by->vc_kick_at ? now - by->vc_kick_at : -1;
+    }
     vc_take(best, c);
     HOS_CHAIN(HOS_CHAIN_SIGNAL, vc_chain_key(best));
     WakeConditionVariable(&best->vc_cv);
@@ -1700,10 +1748,11 @@ static void vc_grant(int c) {
 static void vc_stats_locked(int64_t now) {
     if (!vc_st.since) vc_st.since = now;
     if (now - vc_st.since < 5000000000LL) return;
-    hos_log("vcores: %lld takes, %lld waits (mean %.0f us, longest %.1f ms), %lld kicks, %lld yields, %lld escapes in %.0f s",
+    hos_log("vcores: %lld takes, %lld waits (mean %.0f us, longest %.1f ms, %lld over HOS_VCORE_LOG_MS), %lld kicks, %lld yields, "
+            "%lld starved grants, %lld escapes in %.0f s",
             (long long)vc_st.takes, (long long)vc_st.waits, vc_st.waits ? vc_st.wait_ns / 1e3 / vc_st.waits : 0.0,
-            vc_st.max_ns / 1e6, (long long)vc_st.kicks, (long long)vc_st.yields, (long long)vc_st.escapes,
-            (now - vc_st.since) / 1e9);
+            vc_st.max_ns / 1e6, (long long)vc_st.long_waits, (long long)vc_st.kicks, (long long)vc_st.yields,
+            (long long)vc_st.boosts, (long long)vc_st.escapes, (now - vc_st.since) / 1e9);
     memset(&vc_st, 0, sizeof vc_st);
     vc_st.since = now;
 }
@@ -1711,12 +1760,57 @@ static int64_t vc_env_ns(const char *name, int64_t us) {
     const char *e = getenv(name);
     return (e ? atoll(e) : us) * 1000;
 }
+/* (hookshot) HOS_VCORE_LOG_MS=<ms> (50 by default; 0: none): a wait for a core that long is logged with its cause, the thread
+   whose release ended it (its priority, how long it had held the core, how long before it let go it was asked to) or how it
+   ended otherwise, and the holders of the cores the thread may use as it ends (how long each has held its core, and whether it
+   was asked). The first 200 a run; the 5 s "vcores:" line counts them all. Holding vc_lock */
+static int64_t vc_log_ns(void) {
+    static int64_t v = -1;
+    if (v < 0) {
+        const char *e = getenv("HOS_VCORE_LOG_MS");
+        v = (e && *e ? atoll(e) : 50) * 1000000;
+        if (v < 0) v = 0;
+    }
+    return v;
+}
+static void vc_long_wait(HosThread *t, int64_t waited, int how, unsigned m) {
+    vc_st.long_waits++;
+    static int logged;
+    if (logged >= 200 && !hos_profiling_dir()) return;   /* (the profiling mode's events.txt takes them all) */
+    const int log = logged < 200;
+    logged += log;
+    const int64_t now = hos_now_ns();
+    char by[160] = "", who[320] = "";
+    if (how == 0 && t->vc_by[0])
+        snprintf(by, sizeof by, "given by %.47s (priority %d), which held it %.1f ms and %s", t->vc_by, t->vc_by_prio,
+                 t->vc_by_held / 1e6, t->vc_by_asked < 0 ? "was never asked" : "");
+    if (how == 0 && t->vc_by[0] && t->vc_by_asked >= 0) {
+        const size_t l = strlen(by);
+        snprintf(by + l, sizeof by - l, "let it go %.1f ms after it was asked", t->vc_by_asked / 1e6);
+    }
+    if (!by[0]) snprintf(by, sizeof by, "%s", how == 0 ? "given at a release" : how == 1 ? "found free" : "ran without one");
+    int len = 0;
+    for (int k = 0; k < vc_cores() && len < (int)sizeof who - 90; k++)
+        if (m >> k & 1) {
+            HosThread *h = vc_owner[k];
+            len += h && h != t ? snprintf(who + len, sizeof who - len, " core %d: %.40s (%d), %.1f ms%s;", k, h->name, h->priority,
+                                          h->vc_held_at ? (now - h->vc_held_at) / 1e6 : 0.0, h->vc_kick ? ", asked" : "")
+                 : snprintf(who + len, sizeof who - len, " core %d: %s;", k, h ? "it" : "-");
+        }
+    if (log)
+        hos_log("vcores: %s (priority %d) waited %.1f ms for a core: %s; the cores it may use now:%s", t->name, t->priority,
+                waited / 1e6, by, who);
+    /* (HOS_PROFILE=1: at its time, and when the wait began, for scripts/profile_report.py to put it in its frame) */
+    hos_profiling_event("vcore_wait %.1f ms from %lld: %s (priority %d) waited for a core: %s; the cores it may use now:%s",
+                        waited / 1e6, (long long)(now - waited), t->name, t->priority, by, who);
+}
 static void vc_acquire(HosThread *t) {
-    static int64_t esc_better = -1, esc_eq, slice;
+    static int64_t esc_better = -1, esc_eq, slice, starve;
     if (esc_better < 0) {
         esc_eq = vc_env_ns("HOS_VCORE_ESCAPE_EQ_US", 2000000);
         esc_better = vc_env_ns("HOS_VCORE_ESCAPE_US", 2000000);
         slice = vc_env_ns("HOS_VCORE_SLICE_US", 2000);
+        starve = vc_env_ns("HOS_VCORE_STARVE_US", 1000000);
     }
     AcquireSRWLockExclusive(&vc_lock);
     vc_st.takes++;
@@ -1729,14 +1823,17 @@ static void vc_acquire(HosThread *t) {
     const int64_t t0 = hos_now_ns();
     HOS_CHAIN(HOS_CHAIN_WAIT, vc_chain_key(t));
     t->vc_since = t0;
+    t->vc_by[0] = 0;
+    int how = 1;   /* (vc_long_wait: 0 a grant, 1 found free, 2 an escape) */
     t->vc_queued = 1;
     if (vc_nq < 1024) vc_queue[vc_nq++] = t;
     vc_st.waits++;
     for (;;) {
         /* the worst holder worse than t on a core t may use gives it up at its next checkpoint; after
            HOS_VCORE_SLICE_US (2000) of waiting, a holder as good as t does too (a time slice: Horizon would leave
-           it running, but its threads never run two at once on one core, which the game's per-core data needs). The
-           holder sees the request at its next nn::os call or SVC, or at a loop header (the interrupt polls) */
+           it running, but its threads never run two at once on one core, which the game's per-core data needs); once
+           t is starved (HOS_VCORE_STARVE_US), the worst holder there is, whatever its priority. The holder sees the
+           request at its next nn::os call or SVC, or at a loop header (the interrupt polls) */
         const unsigned m = vc_allowed(t);
         HosThread *worst = NULL;
         for (int k = 0; k < vc_cores(); k++) {
@@ -1746,23 +1843,35 @@ static void vc_acquire(HosThread *t) {
         if (!worst && hos_now_ns() - t0 > slice)
             for (int k = 0; k < vc_cores() && !worst; k++)
                 if ((m >> k & 1) && vc_owner[k] && vc_owner[k]->priority == t->priority) worst = vc_owner[k];
+        if (!worst && t->vc_starved)
+            for (int k = 0; k < vc_cores(); k++) {
+                HosThread *h = vc_owner[k];
+                if ((m >> k & 1) && h && (!worst || h->priority > worst->priority)) worst = h;
+            }
         if (worst && !worst->vc_kick) {
             worst->vc_kick = worst->priority > t->priority ? 1 : 2;
+            worst->vc_kick_at = hos_now_ns();
             Ctx *rc = worst->run_ctx;   /* (a fiber's context while it runs one) */
             __atomic_store_n(rc ? &rc->poll : &worst->ctx.poll, 1, __ATOMIC_RELAXED);
             vc_st.kicks++;
         }
         SleepConditionVariableSRW(&t->vc_cv, &vc_lock, 1, 0);
-        if (t->vc_held) break;   /* granted by a release */
+        if (t->vc_held) {   /* granted by a release */
+            how = 0;
+            break;
+        }
         if ((c = vc_free_for(t)) >= 0) {
             vc_dequeue(t);
             vc_take(t, c);
             break;
         }
         const int64_t waited = hos_now_ns() - t0;
+        if (starve > 0 && waited > starve) t->vc_starved = 1;
         if (waited > (worst ? esc_better : esc_eq)) {
             vc_dequeue(t);
+            t->vc_starved = 0;
             t->vc_escaped = 1;
+            how = 2;
             vc_st.escapes++;
             static int logged;
             if (logged < 40) {
@@ -1783,6 +1892,8 @@ static void vc_acquire(HosThread *t) {
     HOS_CHAIN(HOS_CHAIN_WOKE, vc_chain_key(t));
     vc_st.wait_ns += waited;
     if (waited > vc_st.max_ns) vc_st.max_ns = waited;
+    if (vc_log_ns() && waited >= vc_log_ns()) vc_long_wait(t, waited, how, vc_allowed(t));
+    if (hos_fps_timing) t->vc_wait_total += waited;
     vc_stats_locked(hos_now_ns());
     ReleaseSRWLockExclusive(&vc_lock);
 }
@@ -1793,10 +1904,10 @@ static void vc_release(HosThread *t) {
     vc_owner[c] = NULL;
     t->vc_held = 0;
     t->vc_kick = 0;
-    vc_grant(c);
+    vc_grant(c, t);
     ReleaseSRWLockExclusive(&vc_lock);
 }
-/* gives the core to a waiter allowed on it that is better than t (strict) or as good (a yield) */
+/* gives the core to a waiter allowed on it that is better than t (strict) or as good (a yield), or starved */
 static void vc_yield(HosThread *t, int strict) {
     if (!t->vc_held) return;
     AcquireSRWLockExclusive(&vc_lock);
@@ -1804,7 +1915,7 @@ static void vc_yield(HosThread *t, int strict) {
     int any = 0;
     for (int i = 0; i < vc_nq && !any; i++) {
         HosThread *w = vc_queue[i];
-        any = (vc_allowed(w) >> c & 1) && (strict ? w->priority < t->priority : w->priority <= t->priority);
+        any = (vc_allowed(w) >> c & 1) && (w->vc_starved || (strict ? w->priority < t->priority : w->priority <= t->priority));
     }
     t->vc_kick = 0;
     if (any) vc_st.yields++;
@@ -1825,6 +1936,7 @@ int hos_vcore_away(void) {
         t->vc_escaped = 0;
         return escaped;
     }
+    if (hos_fps_timing) t->away_at = hos_now_ns();   /* (the frame trace's blocked time: to hos_vcore_back) */
     vc_release(t);
     return 1;
 }
@@ -1835,6 +1947,7 @@ void hos_vcore_back(void) {
        for has ended, also at a back without its away (a thread's start). A flag left up while a core is held would make
        a later inner block's away answer 1 and take a core in the middle of the outer block */
     t->vc_escaped = 0;
+    if (t->away_at) t->blocked_total += hos_now_ns() - t->away_at, t->away_at = 0;
     if (!t->vc_held) vc_acquire(t);
 }
 /* Lifted code calls this from its interrupt polls with the loop's guest registers still in host registers (a64_poll_cur,
