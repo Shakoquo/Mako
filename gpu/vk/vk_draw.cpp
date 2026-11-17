@@ -1215,6 +1215,7 @@ struct PipeEntry {
     std::shared_ptr<JobClaim> claim;   // (hookshot: its build, which a draw that must wait runs itself if no worker took it yet)
     std::atomic<uint8_t> how{0};   // (the census: how play made it, UseCounters::made_how; 0: before play, or not made)
     std::atomic<uint8_t> quick{0};   // (hookshot: quick_pipeline's, before the full build: quick_pipe.h's kNone, kMaking, kTried)
+    std::atomic<const Program*> prog{nullptr};   // (Mako, from ReLink e894874: the program object it was built from)
 };
 std::unordered_map<uint64_t, std::unique_ptr<PipeEntry>> pipelines;   // (the replay thread's)
 // (hookshot) Pipelines made ahead of their first draw by the load at a program's create call (vk_programs.cpp), by their keys.
@@ -2496,15 +2497,36 @@ PipeEntry* graphics_pipeline(const Program& p, const NvnState& s, const Targets&
         std::memcpy(f.blend, blend, sizeof blend);
         return e;
     };
-    const uint64_t key = pipeline_key(p, s, at, topo);
+    // (Mako 4.2, from Project ReLink e894874: THE FREEZE NEAR WATER) The key names a program by its code and its variant's hash,
+    // and two program objects can have both the same: a pipeline made from one was drawn with the other, whose shader modules
+    // and layout were not the same; the scene's lit programs' light loop read garbage for its count and the GPU never finished
+    // the draw (device lost at Lake Hylia, 7 runs of 7 in ReLink's tests, none with this). So a pipeline belongs to the program
+    // object it was built from: another object with the same key gets its own. RX_VK_PIPE_BY_PROGRAM=0: as before
+    static const bool by_program = !getenv("RX_VK_PIPE_BY_PROGRAM") || atoi(getenv("RX_VK_PIPE_BY_PROGRAM")) != 0;
+    uint64_t key = pipeline_key(p, s, at, topo);
+    const uint64_t own = mix(key, (uint64_t)(uintptr_t)&p);
+    const uint64_t mkey = by_program ? own : key;
     static thread_local FlatMap<uint64_t, PipeEntry*> mine;   // (entries live as long as the cache)
-    if (auto m = mine.find(key); m != mine.end()) return FINE_X(FC_PIPE_MAP, 1), remember(m->second);
+    if (auto m = mine.find(mkey); m != mine.end()) return FINE_X(FC_PIPE_MAP, 1), remember(m->second);
     PROF_EXACT();   // (new to this thread, or new: rare, and a pipeline made can take milliseconds)
     ParLock lk;
     auto it = pipelines.find(key);
-    if (it != pipelines.end()) return remember(mine[key] = it->second.get());
+    bool own_key = false;
+    if (by_program && it != pipelines.end()) {
+        const Program* made_for = it->second->prog.load(std::memory_order_acquire);
+        if (made_for && made_for != &p) {
+            static std::atomic<int> told{0};
+            if (told++ < 12)
+                logf("vk: pipeline %016llx was made for another program object of %016llx (variant %016llx): this one gets its own",
+                     (unsigned long long)key, (unsigned long long)p.key, (unsigned long long)p.variant);
+            key = own, own_key = true;
+            it = pipelines.find(key);
+        }
+    }
+    if (it != pipelines.end()) return remember(mine[mkey] = it->second.get());
     pcache_init();
     PipeEntry* e = pipelines.emplace(key, std::make_unique<PipeEntry>()).first->second.get();
+    e->prog.store(&p, std::memory_order_release);
     if (kept_ready_n.load(std::memory_order_acquire)) {   // (made at its program's create call: ready, as one the precompile built)
         VkPipeline kept = VK_NULL_HANDLE;
         {
@@ -2524,7 +2546,7 @@ PipeEntry* graphics_pipeline(const Program& p, const NvnState& s, const Targets&
     }
     use_counters.pipes_new++, census.play_pipes_new++;
     // (new to the notes and one the preparation predicted: only the prediction put it in a cache. Counted once made, by how)
-    const bool fresh = pipeline_note(key, p, s, at, topo, color_types);
+    const bool fresh = !own_key && pipeline_note(key, p, s, at, topo, color_types);   // (its own key holds an address: not noted)
     const bool predicted = fresh && predicted_key(key);
     static const bool sync = env_on("RX_VK_SYNC_PIPELINES");
     if (sync) {
@@ -10088,6 +10110,7 @@ void precompile_run(void (*progress)(size_t done, size_t total)) {
                     if (it == pipelines.end()) {
                         auto e = std::make_unique<PipeEntry>();
                         e->pipeline = made;
+                        e->prog.store(p, std::memory_order_release);   // (see graphics_pipeline: whose pipeline it is)
                         e->ready.store(true, std::memory_order_release);
                         pipelines.emplace(n.key, std::move(e));
                     } else if (made) vkDestroyPipeline(dev.device, made, nullptr);   // (unpublished: play or another note already owns the entry)
