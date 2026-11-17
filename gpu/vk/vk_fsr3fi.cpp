@@ -345,8 +345,9 @@ uint32_t asked() {
         return e && *e ? std::max(0, atoi(e)) : -1;
     }();
     if (env >= 0) return env ? 1u : 0u;
-    // (DLSS FG on the row: where DLSS-G makes none; FSR 3.1 FG: all of them; Built-in FG: the renderer's own)
-    return opts.framegen >= 1 && opts.framegen_by != 1 ? 1u : 0u;
+    // (Mako 4.2: FSR 3.1 FG only where the row asks for it. Elsewhere, DLSS-G where it runs, then the renderer's own, which keeps
+    // the HUD clean: FSR 3.1's frames smeared it, as this game draws its HUD into the picture, as Mako 4.1.1)
+    return opts.framegen >= 1 && opts.framegen_by == 2 ? 1u : 0u;
 }
 
 /// kKeepStatic, unless RX_VK_FSR_FG_HUD=0 (AMD's passes, the HUD moved with the scene: for an A/B)

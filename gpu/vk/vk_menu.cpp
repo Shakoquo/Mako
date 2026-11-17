@@ -1140,7 +1140,7 @@ const char* framegen_maker_name() {
 /// counter's (framegen_maker_name), not the choice's name
 const char* tx_framegen_by(int v) {
     if (framegen_by_dlss_offered() && (v == 0 || dlss_fg_forced())) return "DLSS FG";
-    return v == 1 ? "Built-in FG" : "FSR 3.1 FG";
+    return v == 2 ? "FSR 3.1 FG" : "Built-in FG";   // (Mako 4.2: 0 is the built-in one where DLSS FG cannot run)
 }
 /// Why DLSS-G does not make the frames now (vk_dlss.h FgSkip, and the Auto multiplier's FG_SKIP_COUNT), the row's line after
 /// "Not DLSS FG now: ". most: its runtime's most made frames, for FG_SKIP_TOO_MANY
@@ -1173,6 +1173,7 @@ const char* framegen_skip_text(int why, unsigned most) {
 /// (every one): the choice's; at DLSS FG "Not DLSS FG now: " with each reason, and the paused line; the switch's line; then
 /// "DLSS FG cannot run: " with each of its reasons
 const char* hn_framegen_by(int v, int variant) {
+    if (v == 0 && !framegen_by_dlss_offered()) v = 1;   // (Mako 4.2: Built-in FG)
     static const char* const t[] = {
         "NVIDIA DLSS Frame Generation (RTX 40 and newer), made from the Upscaler's depth and motion.",
         "The renderer's own: made from the finished picture alone.",
@@ -2965,8 +2966,8 @@ void set_row(Row& r, int v, int dir, bool keep = true) {
         v = step_output_choice(*r.value, dir);
         if (v == *r.value) return;
     }
-    // (hookshot) Frame generation by where DLSS FG cannot run: FSR 3.1 FG (0; a 2 is the same) and Built-in FG (1)
-    if (r.value == &opts.framegen_by && !framegen_by_dlss_offered()) v = (v % 2 + 2) % 2;
+    // (Mako 4.2) Frame generation by where DLSS FG cannot run: Built-in FG (1; a 0 is the same) and FSR 3.1 FG (2), one or the other
+    if (r.value == &opts.framegen_by && !framegen_by_dlss_offered()) v = *r.value == 2 ? 1 : 2;
     if (stops_at_ends(r)) v = std::min(std::max(v, r.lo), r.hi);   // (a scale: it stops at its ends)
     if (r.value == &opts.pad_layout) {
         if (v > 2) v = dir > 0 ? 0 : 2;
